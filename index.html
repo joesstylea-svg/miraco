@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MIRACO</title>
+<style>
+  :root{
+    --bg:#FAFAF7;
+    --paper:#F5F1EA;
+    --ink:#1C1C1A;
+    --muted:#8A8680;
+    --line:#E8E3DA;
+    --accent:#B8896F;
+    --accent-light:#F0E6DE;
+    --soft:#FFFCF8;
+    --ok:#6E8F86;
+    --warn:#C58D74;
+    --card:#FFFFFF;
+    --r-lg:24px;
+    --r-md:16px;
+    --r-sm:12px;
+    --sh-card:0 2px 16px rgba(0,0,0,.07),0 0 0 1px rgba(0,0,0,.04);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;letter-spacing:.02em;font-size:14px;line-height:1.6}
+  .app{max-width:430px;margin:0 auto;min-height:100svh;background:var(--bg);position:relative;overflow:hidden}
+
+  /* ─── Header ─── */
+  header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(250,250,247,.92);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--line);
+    height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  }
+  .brand{display:flex;align-items:center;gap:8px}
+  .brand-star{color:var(--accent);font-size:20px;line-height:1}
+  .brand-text{display:flex;flex-direction:column}
+  .brand-name{font-family:Georgia,serif;letter-spacing:.22em;font-size:18px;font-weight:400;line-height:1.1}
+  .brand-en{font-size:9px;color:var(--muted);letter-spacing:.14em;margin-top:2px}
+  .iconbtn{border:0;background:transparent;padding:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background .15s}
+  .iconbtn:hover{background:var(--line)}
+  .iconbtn svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:1.5;stroke-linecap:round}
+
+  /* ─── Layout ─── */
+  main{padding:0 0 100px}
+  .screen{display:none;animation:fadeUp .2s ease}
+  .screen.active{display:block}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .px{padding-left:20px;padding-right:20px}
+
+  /* ─── Typography ─── */
+  h1.page-hero{
+    font-family:Georgia,"Hiragino Mincho ProN",serif;
+    font-weight:400;font-size:27px;line-height:1.65;
+    letter-spacing:.05em;color:var(--ink);
+    padding:24px 20px 4px;
+  }
+  h1.page-hero em{font-style:normal;color:var(--accent)}
+  .page-en{font-size:11px;color:var(--muted);letter-spacing:.14em;padding:0 20px;margin-bottom:14px}
+  .page-lead{font-size:13px;line-height:1.95;color:#555;padding:0 20px;margin-bottom:20px}
+  h2.section-title{font-size:16px;font-weight:600;letter-spacing:.04em}
+  h3{font-size:14px;font-weight:600}
+  .muted{color:var(--muted);font-size:12px;line-height:1.7}
+  .section-head{display:flex;align-items:center;gap:8px;padding:28px 20px 14px}
+  .section-head h2{flex:1}
+  .s-line{width:20px;height:2px;background:var(--accent);border-radius:999px;flex:none}
+
+  /* ─── Buttons ─── */
+  .btn{
+    width:100%;border:0;border-radius:var(--r-md);
+    padding:16px 18px;font-size:14px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    cursor:pointer;transition:opacity .15s,transform .1s;letter-spacing:.04em;
+    font-family:inherit;
+  }
+  .btn:active{opacity:.85;transform:scale(.99)}
+  .btn.primary{background:var(--ink);color:#fff}
+  .btn.warm{background:var(--accent);color:#fff}
+  .btn.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+  .btn.line-btn{background:#06C755;color:#fff}
+  .btn.mini{width:auto;padding:9px 16px;font-size:12px;border-radius:10px}
+  .row{display:flex;gap:10px}
+  .row>.btn{flex:1}
+  .px-btn{padding:0 20px}
+
+  /* ─── Home Hero ─── */
+  .home-hero{
+    margin:16px 20px 0;border-radius:var(--r-lg);
+    height:230px;position:relative;overflow:hidden;
+    background:linear-gradient(140deg,#F5EDE3 0%,#EAD9C8 40%,#D8C4AF 100%);
+  }
+  .home-hero::before{
+    content:"";position:absolute;
+    top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.55) 0%,transparent 70%);
+  }
+  .home-hero-badge{
+    position:absolute;top:16px;left:16px;
+    background:rgba(255,255,255,.82);backdrop-filter:blur(8px);
+    border-radius:999px;padding:5px 13px;
+    font-size:10px;letter-spacing:.12em;color:var(--accent);font-weight:600;
+  }
+  .home-hero-card{
+    position:absolute;bottom:16px;left:16px;right:16px;
+    background:rgba(255,255,255,.86);backdrop-filter:blur(14px);
+    border-radius:var(--r-md);padding:14px 16px;
+  }
+  .home-hero-card-title{font-size:13px;font-weight:600;margin-bottom:3px}
+  .home-hero-card-sub{font-size:11px;color:var(--muted)}
+  .home-hero-wm{
+    position:absolute;top:50%;right:20px;transform:translateY(-50%);
+    font-family:Georgia,serif;letter-spacing:.22em;font-size:17px;
+    color:rgba(120,80,55,.14);pointer-events:none;
+  }
+  /* Simulated mockup card in hero */
+  .home-hero-mock{
+    position:absolute;top:16px;right:18px;
+    width:72px;height:46px;
+    background:linear-gradient(135deg,#fff 0%,#f5ede3 100%);
+    border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.14);
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,serif;font-size:8px;letter-spacing:.2em;color:rgba(80,50,30,.5);
+    transform:rotate(-3deg);
+  }
+
+  /* ─── Home Grid Cards ─── */
+  .h-scroll{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px}
+  .hcard{
+    background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r-md);
+    overflow:hidden;cursor:pointer;
+    box-shadow:var(--sh-card);transition:transform .12s;
+  }
+  .hcard:active{transform:scale(.98)}
+  .hcard-img{
+    height:100px;position:relative;overflow:hidden;
+    background:linear-gradient(135deg,#F5EDE3 0%,#E0CABB 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .hcard-img-inner{
+    width:50px;height:32px;
+    background:rgba(255,255,255,.65);
+    border-radius:4px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,serif;font-size:7px;letter-spacing:.15em;color:rgba(80,50,30,.5);
+  }
+  .hcard-badge{
+    position:absolute;top:8px;left:8px;
+    background:var(--ink);color:#fff;border-radius:999px;
+    font-size:9px;padding:3px 8px;letter-spacing:.06em;
+  }
+  .hcard-body{padding:10px 12px 13px}
+  .hcard-title{font-size:13px;font-weight:600;margin-bottom:3px}
+  .hcard-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .hcard-price{font-family:Georgia,serif;color:var(--accent);font-size:14px}
+
+  /* ─── Panel ─── */
+  .panel{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:18px 20px;margin:0 20px 14px;
+  }
+  .panel-label{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px}
+  .check-row{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .check-row:last-child{border-bottom:none}
+  .check-dot{width:18px;height:18px;border-radius:50%;background:var(--accent-light);display:grid;place-items:center;flex:none;margin-top:2px}
+  .check-dot svg{width:9px;height:9px;stroke:var(--accent);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+  .check-text{font-size:13px;color:#444;line-height:1.6}
+
+  /* ─── Menu List ─── */
+  .list-items{display:flex;flex-direction:column;gap:10px;padding:0 20px}
+  .listitem{
+    display:flex;gap:13px;align-items:center;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:13px;
+    cursor:pointer;box-shadow:var(--sh-card);transition:transform .12s;
+  }
+  .listitem:active{transform:scale(.99)}
+  .thumb{
+    width:60px;height:60px;border-radius:var(--r-sm);
+    background:linear-gradient(135deg,#F5EDE3,#E0CDB8);
+    flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    position:relative;
+  }
+  .thumb-inner{
+    width:34px;height:22px;background:rgba(255,255,255,.7);
+    border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.1);
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,serif;font-size:6px;letter-spacing:.1em;color:rgba(80,50,30,.5);
+  }
+  .listitem-body{flex:1;min-width:0}
+  .listitem-title{font-size:14px;font-weight:600;margin-bottom:2px}
+  .listitem-desc{font-size:11px;color:var(--muted);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .listitem-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}
+  .listitem-price{font-family:Georgia,serif;font-size:13px;color:var(--accent);white-space:nowrap}
+  .listitem-arrow{color:var(--muted);font-size:18px;line-height:1}
+
+  /* ─── Detail ─── */
+  .detail-hero{
+    height:250px;margin:0 20px 0;border-radius:var(--r-lg);
+    background:linear-gradient(135deg,#F5EDE3 0%,#D5B99A 100%);
+    position:relative;overflow:hidden;
+  }
+  .detail-hero::before{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 75% 25%,rgba(255,255,255,.5) 0%,transparent 55%);
+  }
+  .detail-hero-badge{
+    position:absolute;top:14px;left:14px;
+    background:var(--ink);color:#fff;
+    border-radius:999px;font-size:10px;padding:5px 13px;letter-spacing:.08em;font-weight:600;
+  }
+  .detail-hero-mock{
+    position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    width:120px;height:76px;
+    background:linear-gradient(135deg,#fff 0%,#f5ede3 100%);
+    border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.16);
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,serif;font-size:9px;letter-spacing:.2em;color:rgba(80,50,30,.45);
+  }
+  .detail-content{padding:20px 20px 0}
+  .detail-title{font-size:22px;font-weight:600;letter-spacing:.04em;margin-bottom:8px}
+  .detail-desc{font-size:13px;line-height:1.9;color:#555;margin-bottom:18px}
+  .spec-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  .spec-chip{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:999px;padding:6px 12px;font-size:11px;color:var(--ink);
+    display:flex;align-items:center;gap:4px;
+  }
+  .spec-chip b{color:var(--accent);font-weight:600}
+  .price-row{display:flex;align-items:baseline;gap:6px;margin-bottom:20px}
+  .price-main{font-family:Georgia,serif;font-size:28px;color:var(--accent)}
+  .price-tax{font-size:11px;color:var(--muted)}
+  .detail-checklist{margin-bottom:20px}
+  .detail-check{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .detail-check:last-child{border-bottom:none}
+  .detail-check-icon{color:var(--ok);font-size:13px;flex:none}
+  .detail-check-text{font-size:13px;color:#333}
+
+  /* ─── Steps ─── */
+  .steps{display:flex;align-items:center;padding:20px 20px 16px}
+  .step{display:flex;align-items:center;flex:1}
+  .step:last-child{flex:none}
+  .step-circle{
+    width:28px;height:28px;border-radius:50%;
+    border:1.5px solid var(--line);
+    display:grid;place-items:center;
+    font-size:11px;font-weight:600;color:var(--muted);flex:none;
+  }
+  .step-circle.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .step-circle.done{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .step-label{font-size:10px;color:var(--muted);margin-left:6px;letter-spacing:.04em}
+  .step-label.on{color:var(--ink);font-weight:600}
+  .step-line{height:1px;background:var(--line);flex:1;margin:0 8px}
+
+  /* ─── Form ─── */
+  .form-body{padding:0 20px}
+  .form-group{margin-bottom:16px}
+  .form-group label{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;text-transform:uppercase}
+  .form-group input,
+  .form-group textarea,
+  .form-group select{
+    width:100%;border:1.5px solid var(--line);background:var(--card);
+    border-radius:var(--r-sm);padding:13px 15px;
+    font-size:15px;outline:none;color:var(--ink);
+    transition:border-color .15s;
+    -webkit-appearance:none;font-family:inherit;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus{border-color:var(--accent)}
+  .form-group textarea{min-height:110px;resize:vertical;line-height:1.7}
+  .form-group select{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8680' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;
+  }
+  .form-hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .file-upload{
+    border:1.5px dashed var(--line);border-radius:var(--r-sm);
+    padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--paper);
+  }
+  .file-upload:hover{border-color:var(--accent)}
+  .file-upload-icon{font-size:22px;margin-bottom:6px;color:var(--muted)}
+  .file-upload-text{font-size:12px;color:var(--muted)}
+
+  /* ─── Confirm ─── */
+  .confirm-row{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .confirm-row:last-child{border-bottom:none}
+  .confirm-label{font-size:11px;color:var(--muted);width:76px;flex:none;padding-top:1px;letter-spacing:.04em}
+  .confirm-val{font-size:14px;color:var(--ink);flex:1;line-height:1.6}
+
+  /* ─── Complete ─── */
+  .complete-icon{
+    width:84px;height:84px;border-radius:50%;
+    border:1.5px solid var(--line);background:var(--accent-light);
+    display:grid;place-items:center;margin:48px auto 22px;
+  }
+  .complete-icon svg{width:34px;height:34px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .receipt-no{font-family:Georgia,serif;font-size:28px;letter-spacing:.12em;color:var(--accent);margin-top:6px}
+
+  /* ─── My Page ─── */
+  .mypage-head{padding:22px 20px 6px}
+  .mypage-name{font-size:20px;font-weight:600;margin-bottom:3px}
+  .mypage-sub{font-size:12px;color:var(--muted)}
+  .order-card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:16px;margin:0 20px 10px;
+    box-shadow:var(--sh-card);
+  }
+  .order-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .order-id{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em}
+  .order-title{font-size:15px;font-weight:600;margin-bottom:4px}
+  .order-date{font-size:11px;color:var(--muted)}
+  .status-pill{
+    border-radius:999px;padding:4px 11px;font-size:11px;font-weight:600;flex:none;
+    background:var(--accent-light);color:var(--accent);
+  }
+  .status-pill.active{background:#E8F2F0;color:var(--ok)}
+  .status-pill.done{background:#F0F0F0;color:var(--muted)}
+  .progress-bar{height:3px;background:var(--line);border-radius:999px;margin:12px 0 8px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+
+  /* ─── Chat ─── */
+  .chat-messages{display:flex;flex-direction:column;gap:10px;padding:16px 20px}
+  .bubble{max-width:78%;padding:11px 15px;border-radius:18px;font-size:13px;line-height:1.7}
+  .bubble.me{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:4px}
+  .bubble.you{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px;color:var(--ink)}
+  .bubble-time{font-size:10px;color:var(--muted);margin-top:4px}
+  .bubble-wrap{display:flex;flex-direction:column}
+  .bubble-wrap.me{align-items:flex-end}
+  .bubble-wrap.you{align-items:flex-start}
+  .chatbar{
+    position:fixed;left:50%;bottom:70px;transform:translateX(-50%);
+    max-width:430px;width:100%;
+    display:none;padding:10px 14px;
+    background:rgba(250,250,247,.96);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);gap:10px;align-items:center;
+  }
+  .chatbar.on{display:flex}
+  .chatbar input{
+    flex:1;border:1.5px solid var(--line);border-radius:999px;
+    padding:11px 18px;font-size:14px;background:var(--card);
+    outline:none;font-family:inherit;
+  }
+  .chatbar input:focus{border-color:var(--accent)}
+
+  /* ─── Estimate ─── */
+  .est-amount{
+    text-align:center;padding:20px 0 16px;border-bottom:1px solid var(--line);margin-bottom:16px;
+  }
+  .est-amount-label{font-size:11px;color:var(--muted);letter-spacing:.1em;margin-bottom:6px}
+  .est-amount-val{font-family:Georgia,serif;font-size:32px;color:var(--accent)}
+  .est-amount-tax{font-size:11px;color:var(--muted);margin-left:4px}
+  .est-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .est-row:last-child{border-bottom:none;font-weight:700;font-size:14px}
+
+  /* ─── Pay ─── */
+  .pay-option{
+    background:var(--card);border:1.5px solid var(--line);
+    border-radius:var(--r-md);padding:15px 17px;margin:0 20px 10px;
+    cursor:pointer;transition:border-color .15s;
+  }
+  .pay-option:has(input:checked){border-color:var(--accent);background:var(--accent-light)}
+  .pay-label{display:flex;align-items:center;gap:11px;cursor:pointer;font-size:14px;font-weight:500}
+  .pay-label input{accent-color:var(--accent);width:16px;height:16px;flex:none}
+  .pay-sub{font-size:11px;color:var(--muted);margin-top:4px;padding-left:27px}
+
+  /* ─── Admin ─── */
+  .admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 20px}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;text-align:center;}
+  .stat-label{font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:6px}
+  .stat-val{font-size:24px;font-weight:700;color:var(--ink)}
+  .admin-row{display:grid;grid-template-columns:1fr 72px 54px;gap:8px;padding:11px 0;border-bottom:1px solid var(--line);align-items:center;font-size:12px}
+  .admin-row:last-child{border-bottom:none}
+  .admin-head{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.06em}
+  .tag{display:inline-block;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:600;background:var(--accent-light);color:var(--accent)}
+
+  /* ─── Bottom Nav ─── */
+  .nav{
+    position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+    max-width:430px;width:100%;height:70px;
+    background:rgba(250,250,247,.96);backdrop-filter:blur(16px);
+    border-top:1px solid var(--line);
+    display:grid;grid-template-columns:repeat(4,1fr);z-index:30;
+  }
+  .nav button{
+    border:0;background:transparent;font-size:10px;color:var(--muted);
+    cursor:pointer;padding:10px 0 8px;transition:color .15s;letter-spacing:.04em;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .nav button svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round;transition:stroke .15s}
+  .nav button.nav-active{color:var(--ink)}
+  .nav button.nav-active svg{stroke:var(--ink)}
+
+  /* ─── Drawer ─── */
+  .drawer{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:50;display:none}
+  .drawer.on{display:block}
+  .drawer-panel{
+    margin-left:auto;width:min(76%,300px);height:100%;
+    background:var(--ink);color:#fff;
+    display:flex;flex-direction:column;
+  }
+  .drawer-head{padding:44px 26px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .drawer-brand-star{color:var(--accent);font-size:18px;margin-bottom:4px}
+  .drawer-brand-name{font-family:Georgia,serif;letter-spacing:.22em;font-size:19px;margin-bottom:3px}
+  .drawer-brand-sub{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.14em}
+  .drawer-links{flex:1;padding:8px 0}
+  .drawer-panel button{
+    display:block;width:100%;text-align:left;
+    background:transparent;color:rgba(255,255,255,.72);border:0;
+    padding:14px 26px;font-size:14px;letter-spacing:.04em;
+    transition:color .15s,background .15s;font-family:inherit;cursor:pointer;
+  }
+  .drawer-panel button:hover{color:#fff;background:rgba(255,255,255,.07)}
+  .drawer-foot{padding:16px 26px 40px;border-top:1px solid rgba(255,255,255,.1)}
+  .drawer-close-btn{display:flex;align-items:center;gap:8px;background:transparent;border:0;color:rgba(255,255,255,.4);font-size:13px;cursor:pointer;padding:10px 0;font-family:inherit}
+
+  /* ─── Delivery ─── */
+  .delivery-actions{display:flex;flex-direction:column;gap:10px;padding:0 20px}
+
+  /* ─── Page head ─── */
+  .page-head{padding:20px 20px 12px;display:flex;align-items:center;gap:12px}
+  .page-head h2{font-size:19px;font-weight:600}
+  .back-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;cursor:pointer;flex:none}
+  .back-btn svg{width:14px;height:14px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round}
+
+  /* ─── Toast ─── */
+  .toast{
+    position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(10px);
+    background:var(--ink);color:#fff;border-radius:999px;
+    padding:10px 20px;font-size:13px;letter-spacing:.04em;
+    opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:100;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ─── Admin status select ─── */
+  .status-select{
+    border:1px solid var(--line);border-radius:8px;padding:4px 8px;
+    font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-light);
+    -webkit-appearance:none;outline:none;cursor:pointer;font-family:inherit;
+  }
+
+  /* ─── Form error ─── */
+  .form-group input.error,
+  .form-group textarea.error{border-color:#e07070}
+  .form-error{font-size:11px;color:#c05050;margin-top:4px}
+
+  /* ─── Empty state ─── */
+  .empty-state{text-align:center;padding:36px 20px}
+  .empty-state-icon{font-size:36px;margin-bottom:12px;color:var(--muted);opacity:.5}
+  .empty-state-text{font-size:13px;color:var(--muted);line-height:1.8}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- ─── Header ─── -->
+<header>
+  <div class="brand">
+    <span class="brand-star">✦</span>
+    <div class="brand-text">
+      <div class="brand-name">MIRACO</div>
+      <div class="brand-en">ミラコ</div>
+    </div>
+  </div>
+  <button class="iconbtn" data-drawer>
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</header>
+
+<main>
+
+<!-- ═══ HOME ═══ -->
+<section class="screen active" id="home">
+  <h1 class="page-hero">ユーワードに入ったけど、<br>どうしたらいいかわからない…を、<br><em>やさしくサポートします。</em></h1>
+  <p class="page-en">We support your first step.</p>
+  <p class="page-lead">小さな「困った」を気軽に相談できる場所。名刺づくり、アイキャッチ、出店準備、ホームページ設定など、あなたの活動をそっと後押しします。</p>
+
+  <div class="px-btn" style="margin-bottom:20px">
+    <button class="btn primary" data-nav="menu" style="border-radius:999px">
+      困ったことを相談してみる &nbsp;→
+    </button>
+  </div>
+
+  <div class="home-hero" style="margin-bottom:28px">
+    <div class="home-hero-badge">MIRACOサポート</div>
+    <div class="home-hero-mock">MIRACO</div>
+    <div class="home-hero-wm">MIRACO</div>
+    <div class="home-hero-card">
+      <div class="home-hero-card-title">「何から始めたらいい？」を一緒に整理します</div>
+      <div class="home-hero-card-sub">まずは気軽にご相談ください ✦</div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <div class="s-line"></div>
+    <h2 class="section-title">MIRACOでできること</h2>
+  </div>
+  <div class="h-scroll" id="homeCards" style="margin-bottom:12px"></div>
+  <div style="text-align:right;padding:0 20px;margin-bottom:28px">
+    <button class="btn ghost" style="width:auto;display:inline-flex;padding:8px 18px;font-size:12px;border-radius:999px" data-nav="menu">すべてのメニューを見る →</button>
+  </div>
+
+  <div class="section-head">
+    <div class="s-line"></div>
+    <h2 class="section-title">こんな小さな「困った」を解決します</h2>
+  </div>
+  <div class="panel">
+    <div class="panel-label">よくあるお悩み</div>
+    <div class="check-row">
+      <div class="check-dot"><svg viewBox="0 0 9 9"><polyline points="1.5,4.5 3.5,7 7.5,2"/></svg></div>
+      <div class="check-text">何から始めたらいいのかわからない</div>
+    </div>
+    <div class="check-row">
+      <div class="check-dot"><svg viewBox="0 0 9 9"><polyline points="1.5,4.5 3.5,7 7.5,2"/></svg></div>
+      <div class="check-text">SNS告知用の画像が自分で作れない</div>
+    </div>
+    <div class="check-row">
+      <div class="check-dot"><svg viewBox="0 0 9 9"><polyline points="1.5,4.5 3.5,7 7.5,2"/></svg></div>
+      <div class="check-text">出店準備を一緒に進めてほしい</div>
+    </div>
+    <div class="check-row">
+      <div class="check-dot"><svg viewBox="0 0 9 9"><polyline points="1.5,4.5 3.5,7 7.5,2"/></svg></div>
+      <div class="check-text">ユーワード活動の動き方を相談したい</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MENU ═══ -->
+<section class="screen" id="menu">
+  <div class="page-head"><h2>メニュー一覧</h2></div>
+  <p class="muted" style="padding:0 20px;margin-bottom:16px">困っている内容に近いものを選んでください。</p>
+  <div class="list-items" id="menuList"></div>
+</section>
+
+<!-- ═══ DETAIL ═══ -->
+<section class="screen" id="detail">
+  <div class="page-head" style="padding-bottom:0">
+    <button class="back-btn" id="detailBack">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+  </div>
+  <div class="detail-hero">
+    <div class="detail-hero-badge" id="detailBadge">人気 No.1</div>
+    <div class="detail-hero-mock">MIRACO</div>
+  </div>
+  <div class="detail-content">
+    <h2 class="detail-title" id="detailTitle"></h2>
+    <p class="detail-desc" id="detailDesc"></p>
+    <div class="spec-chips" id="detailSpecs"></div>
+    <div class="price-row">
+      <span class="price-main" id="detailPrice"></span>
+      <span class="price-tax">（税込）</span>
+    </div>
+    <div class="panel-label">こんな方におすすめ</div>
+    <p style="font-size:13px;color:#555;line-height:1.85;margin-bottom:20px" id="detailRecommend"></p>
+    <div class="detail-checklist" id="detailChecklist"></div>
+  </div>
+  <div style="padding:4px 20px;display:flex;flex-direction:column;gap:10px;margin-bottom:8px">
+    <button class="btn primary" data-nav="apply" style="border-radius:999px">このメニューを相談する</button>
+    <button class="btn ghost" data-nav="menu">一覧に戻る</button>
+  </div>
+</section>
+
+<!-- ═══ APPLY ═══ -->
+<section class="screen" id="apply">
+  <div class="page-head"><h2>申し込みフォーム</h2></div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-circle on">1</div>
+      <span class="step-label on">入力</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-circle">2</div>
+      <span class="step-label">確認</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-circle">3</div>
+      <span class="step-label">完了</span>
+    </div>
+  </div>
+  <div class="form-body">
+    <div class="form-group">
+      <label>お名前</label>
+      <input id="fName" placeholder="例）山田 花子">
+    </div>
+    <div class="form-group">
+      <label>メールアドレス</label>
+      <input id="fEmail" type="email" placeholder="example@mail.com">
+    </div>
+    <div class="form-group">
+      <label>LINE名</label>
+      <input id="fLine" placeholder="@hanako">
+    </div>
+    <div class="form-group">
+      <label>希望メニュー</label>
+      <select id="fMenu"></select>
+    </div>
+    <div class="form-group">
+      <label>困っていること・ご希望</label>
+      <textarea id="fMsg" placeholder="例）出店用のアイキャッチを作りたいです。イメージはナチュラルな雰囲気で。"></textarea>
+    </div>
+    <div class="form-group">
+      <label>参考画像（任意）</label>
+      <div class="file-upload">
+        <div class="file-upload-icon">📎</div>
+        <div class="file-upload-text">タップして画像を選択<br><span style="font-size:10px">PNG / JPG / PDF</span></div>
+      </div>
+      <input id="fFile" type="file" accept="image/*,.pdf" style="display:none">
+    </div>
+    <div class="form-group">
+      <label>希望納期</label>
+      <input id="fDue" type="date">
+      <div class="form-hint">未定の場合は空欄でOKです</div>
+    </div>
+    <div class="form-group">
+      <label>お支払い方法</label>
+      <select id="fPay">
+        <option>ユーワードポイント</option>
+        <option>PayPay</option>
+        <option>銀行振込</option>
+        <option>あとで相談</option>
+      </select>
+    </div>
+  </div>
+  <div class="px-btn" style="padding-top:8px;padding-bottom:8px">
+    <button class="btn primary" id="toConfirm" style="border-radius:999px">次へすすむ →</button>
+  </div>
+</section>
+
+<!-- ═══ CONFIRM ═══ -->
+<section class="screen" id="confirm">
+  <div class="page-head"><h2>入力内容を確認ください</h2></div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-circle done">✓</div>
+      <span class="step-label" style="color:var(--ok)">入力</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-circle on">2</div>
+      <span class="step-label on">確認</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-circle">3</div>
+      <span class="step-label">完了</span>
+    </div>
+  </div>
+  <div class="panel" id="confirmBox"></div>
+  <div class="row px-btn" style="padding-bottom:8px">
+    <button class="btn ghost" data-nav="apply">修正する</button>
+    <button class="btn primary" id="submitOrder">この内容で送信</button>
+  </div>
+</section>
+
+<!-- ═══ COMPLETE ═══ -->
+<section class="screen" id="complete">
+  <div class="complete-icon">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2 style="text-align:center;font-size:19px;padding:0 20px;margin-bottom:8px">お申し込みが完了しました！<br>ありがとうございます。</h2>
+  <p style="text-align:center;font-size:13px;color:var(--muted);padding:0 20px;margin-bottom:24px;line-height:1.9">内容を確認して、1〜2営業日以内にご連絡します。<br>LINEでもご連絡しますので、お友達追加をお願いします。</p>
+  <div class="panel" style="text-align:center;margin-bottom:20px">
+    <div class="panel-label">受付番号</div>
+    <div class="receipt-no" id="receiptNo"></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;padding:0 20px">
+    <button class="btn line-btn" id="lineAddBtn">LINEを追加する</button>
+    <button class="btn primary" data-nav="mypage">マイページで確認する</button>
+    <button class="btn ghost" data-nav="home">ホームへ戻る</button>
+  </div>
+</section>
+
+<!-- ═══ MYPAGE ═══ -->
+<section class="screen" id="mypage">
+  <div class="mypage-head">
+    <div class="mypage-name" id="helloUser">こんにちは。</div>
+    <div class="mypage-sub">ご依頼の状況を確認できます</div>
+  </div>
+  <div style="padding:14px 0 6px">
+    <div id="myOrders"></div>
+  </div>
+  <div class="row px-btn" style="margin-bottom:12px">
+    <button class="btn ghost" data-nav="chat">やり取り</button>
+    <button class="btn primary" data-nav="estimate">お見積り</button>
+  </div>
+  <div style="text-align:center;padding:8px 0">
+    <button class="btn ghost" style="width:auto;margin:0 auto;padding:8px 24px;font-size:12px;border-radius:999px;display:inline-flex" data-nav="menu">すべてのメニューを見る</button>
+  </div>
+</section>
+
+<!-- ═══ CHAT ═══ -->
+<section class="screen" id="chat">
+  <div class="page-head"><h2>チャット・やり取り</h2></div>
+  <div class="chat-messages" id="chatBody">
+    <div class="bubble-wrap you">
+      <div class="bubble you">ご相談ありがとうございます。内容を確認してご連絡しますね。</div>
+      <div class="bubble-time">10:30</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ESTIMATE ═══ -->
+<section class="screen" id="estimate">
+  <div class="page-head"><h2>お見積りのご提案</h2></div>
+  <div class="panel">
+    <div class="panel-label" id="estNo"></div>
+    <div class="est-amount">
+      <div class="est-amount-label">お支払い金額</div>
+      <div>
+        <span class="est-amount-val" id="estTotal"></span>
+        <span class="est-amount-tax">（税込）</span>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px" id="estTitle"></div>
+    <div class="est-row"><span>デザイン料</span><span id="estBase" style="font-family:Georgia,serif;color:var(--accent)"></span></div>
+    <div class="est-row"><span>修正対応（100件）</span><span>¥500</span></div>
+    <div class="est-row"><span>合計</span><span id="estTotalBottom" style="font-family:Georgia,serif;color:var(--accent)"></span></div>
+  </div>
+  <p class="muted px" style="margin-bottom:18px">納期目安：デザイン確定後 5〜7営業日</p>
+  <div class="px-btn">
+    <button class="btn primary" data-nav="pay" style="border-radius:999px">お支払いへ進む →</button>
+    <button class="btn ghost" style="margin-top:10px;border-radius:999px" data-nav="chat">内容について相談する</button>
+  </div>
+</section>
+
+<!-- ═══ PAY ═══ -->
+<section class="screen" id="pay">
+  <div class="page-head"><h2>お支払い方法の選択</h2></div>
+  <div class="pay-option">
+    <label class="pay-label"><input type="radio" name="pay" checked> ユーワードポイント</label>
+    <div class="pay-sub">リンク先でポイント決済を行う想定です。</div>
+  </div>
+  <div class="pay-option">
+    <label class="pay-label"><input type="radio" name="pay"> クレジットカード</label>
+    <div class="pay-sub">VISA / Mastercard / JCB 対応</div>
+  </div>
+  <div class="pay-option">
+    <label class="pay-label"><input type="radio" name="pay"> コンビニ払い</label>
+  </div>
+  <div class="pay-option">
+    <label class="pay-label"><input type="radio" name="pay"> 銀行振込</label>
+  </div>
+  <div class="px-btn" style="margin-top:20px">
+    <button class="btn primary" id="finishPay" style="border-radius:999px">次へ</button>
+  </div>
+</section>
+
+<!-- ═══ DELIVERY ═══ -->
+<section class="screen" id="delivery">
+  <div class="complete-icon">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2 style="text-align:center;font-size:19px;padding:0 20px;margin-bottom:8px">納品が完了しました！</h2>
+  <p style="text-align:center;font-size:13px;color:var(--muted);padding:0 20px;margin-bottom:28px;line-height:1.9">ご依頼いただきありがとうございました。<br>下記よりデータをご確認ください。</p>
+  <div class="delivery-actions">
+    <button class="btn primary" id="downloadBtn">データをダウンロード</button>
+    <button class="btn ghost" id="reviewBtn">レビューを書く</button>
+  </div>
+</section>
+
+<!-- ═══ ADMIN ═══ -->
+<section class="screen" id="admin">
+  <div class="page-head"><h2>管理画面</h2></div>
+  <div class="admin-stats">
+    <div class="stat-card"><div class="stat-label">新規</div><div class="stat-val" id="sNew">0</div></div>
+    <div class="stat-card"><div class="stat-label">対応中</div><div class="stat-val" id="sDoing">0</div></div>
+    <div class="stat-card"><div class="stat-label">売上</div><div class="stat-val" style="font-size:16px">¥0</div></div>
+  </div>
+  <div class="row px-btn" style="margin:16px 0">
+    <button class="btn mini primary" data-nav="adminAdd">＋ メニュー追加</button>
+    <button class="btn mini ghost" id="resetDemo">リセット</button>
+  </div>
+  <div class="section-head"><div class="s-line"></div><h2 class="section-title">依頼管理</h2></div>
+  <div class="panel" style="padding:0 20px">
+    <div class="admin-row admin-head"><span>依頼</span><span>状態</span><span>日付</span></div>
+    <div id="adminOrders"></div>
+  </div>
+  <div class="section-head"><div class="s-line"></div><h2 class="section-title">メニュー管理</h2></div>
+  <div class="panel" style="padding:0 20px">
+    <div class="admin-row admin-head"><span>メニュー</span><span>料金</span><span>状態</span></div>
+    <div id="adminMenus"></div>
+  </div>
+</section>
+
+<!-- ═══ ADMIN ADD ═══ -->
+<section class="screen" id="adminAdd">
+  <div class="page-head"><h2>新規メニュー追加</h2></div>
+  <div class="form-body">
+    <div class="form-group"><label>メニュー名</label><input id="aTitle" placeholder="例）Instagram整えサポート"></div>
+    <div class="form-group"><label>説明文</label><textarea id="aDesc" placeholder="どんなサポートか入力"></textarea></div>
+    <div class="form-group"><label>料金</label><input id="aPrice" placeholder="¥6,600〜"></div>
+    <div class="form-group"><label>納期目安</label><input id="aDue" placeholder="3〜5日"></div>
+  </div>
+  <div class="px-btn">
+    <button class="btn primary" id="addMenuBtn" style="border-radius:999px">追加して公開する</button>
+  </div>
+</section>
+
+</main>
+
+<!-- ─── Bottom Nav ─── -->
+<nav class="nav">
+  <button data-nav="home">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    ホーム
+  </button>
+  <button data-nav="menu">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    メニュー
+  </button>
+  <button data-nav="apply">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    相談する
+  </button>
+  <button data-nav="mypage">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    マイページ
+  </button>
+</nav>
+
+<!-- ─── Chat Bar ─── -->
+<div class="chatbar" id="chatbar">
+  <input id="chatInput" placeholder="メッセージを入力">
+  <button class="btn mini primary" id="sendChat">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+  </button>
+</div>
+
+<!-- ─── Drawer ─── -->
+<div class="drawer" id="drawer">
+  <div class="drawer-panel">
+    <div class="drawer-head">
+      <div class="drawer-brand-star">✦</div>
+      <div class="drawer-brand-name">MIRACO</div>
+      <div class="drawer-brand-sub">ミラコ</div>
+    </div>
+    <div class="drawer-links">
+      <button data-nav="home">ホーム</button>
+      <button data-nav="menu">メニュー一覧</button>
+      <button data-nav="apply">相談する</button>
+      <button data-nav="mypage">マイページ</button>
+      <button data-nav="chat">やり取り</button>
+      <button data-nav="admin">管理画面</button>
+    </div>
+    <div class="drawer-foot">
+      <button class="drawer-close-btn" data-close>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        閉じる
+      </button>
+    </div>
+  </div>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+ const defaults=[
+  {id:'meishi',title:'名刺づくり',price:'¥5,500〜',due:'3〜5日',desc:'はじめましてを伝える、あなたのための名刺を作ります。',rec:'初めて出店する方、今の名刺を整えたい方に。',
+   specs:['納期3〜5日','修正2回まで','印刷代行OK'],
+   includes:['オリジナルデザインの名刺','両面デザイン対応','印刷データ納品 or 印刷代行','修正2回まで無料']},
+  {id:'eyecatch',title:'アイキャッチ作成',price:'¥3,300〜',due:'2〜4日',desc:'SNSや告知で使える、目を引くアイキャッチを作成します。',rec:'イベント告知や出店紹介の画像が必要な方に。',
+   specs:['納期2〜4日','修正2回まで','SNS最適サイズ'],
+   includes:['SNS・告知用バナー制作','ブランドカラー反映','修正2回まで無料','各種SNSサイズ対応']},
+  {id:'hp',title:'ホームページメニュー設定',price:'¥11,000〜',due:'5〜7日',desc:'見やすく、使いやすいメニュー設定を一緒に整えます。',rec:'ホームページはあるけれど整え方がわからない方に。',
+   specs:['納期5〜7日','ヒアリング込み','修正あり'],
+   includes:['現状確認・ヒアリング','メニューページ整え','写真配置・文章調整','公開後サポート']},
+  {id:'booth',title:'出店1回サポート',price:'¥8,800〜',due:'当日まで',desc:'出店準備から当日まで、はじめてをしっかりサポートします。',rec:'持ち物、告知、当日の流れが不安な方に。',
+   specs:['当日まで対応','持ち物確認','告知文作成'],
+   includes:['出店チェックリスト作成','告知文・画像サポート','当日の動き方アドバイス','事後フォロー']},
+  {id:'start',title:'ユーワードスタートパック',price:'¥22,000〜',due:'7〜10日',desc:'アイキャッチ、HPメニュー設定、出店1回サポートをまとめたパックです。',rec:'ユーワードに入ったけど何から始めるか迷っている方に。',
+   specs:['納期7〜10日','3つセット','割引あり'],
+   includes:['アイキャッチ作成','HPメニュー設定','出店1回サポート','まとめて割引適用']},
+  {id:'other',title:'その他の相談',price:'お見積り',due:'要相談',desc:'ユーワード活動の小さな困りごとを気軽に相談できます。',rec:'メニューにない内容も相談したい方に。',
+   specs:['内容相談OK','お見積り無料','柔軟対応'],
+   includes:['内容をヒアリング','カスタムでご提案','お見積り無料','まずは気軽にご相談を']}
+ ];
+ const STATUS_LIST=['ヒアリング中','見積もり中','制作中','確認中','納品済み'];
+
+ let menus=JSON.parse(localStorage.getItem('miraco_menus')||'null')||defaults;
+ let orders=JSON.parse(localStorage.getItem('miraco_orders')||'[]');
+ let selected=menus[0];let draft={};
+ let prevScreen='menu'; // detail の戻り先
+ const $=s=>document.querySelector(s);
+ const $$=s=>Array.from(document.querySelectorAll(s));
+ function save(){localStorage.setItem('miraco_menus',JSON.stringify(menus));localStorage.setItem('miraco_orders',JSON.stringify(orders));}
+ function yenNum(s){const m=(s||'').match(/[0-9,]+/);return m?'¥'+m[0]:s}
+
+ // ─── Toast ───
+ let toastTimer;
+ function toast(msg){
+  const el=$('#toast');el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+ }
+
+ // ─── Nav ───
+ function nav(id){
+  $$('.screen').forEach(s=>s.classList.remove('active'));
+  $('#'+id).classList.add('active');
+  $('#drawer').classList.remove('on');
+  $('#chatbar').classList.toggle('on',id==='chat');
+  // ナビアクティブ状態更新
+  $$('.nav button').forEach(b=>{
+   b.classList.toggle('nav-active', b.dataset.nav===id);
+  });
+  window.scrollTo({top:0,behavior:'instant'});
+  renderMenus();renderOrders();
+ }
+
+ // ─── Render Menus ───
+ function renderMenus(){
+  $('#homeCards').innerHTML=menus.slice(0,4).map(m=>`
+   <div class="hcard" data-detail="${m.id}">
+    <div class="hcard-img"><div class="hcard-img-inner">MIRACO</div></div>
+    <div class="hcard-body">
+     <div class="hcard-title">${m.title}</div>
+     <div class="hcard-desc">${m.desc}</div>
+     <div class="hcard-price">${m.price}</div>
+    </div>
+   </div>`).join('');
+
+  $('#menuList').innerHTML=menus.map(m=>`
+   <div class="listitem" data-detail="${m.id}">
+    <div class="thumb"><div class="thumb-inner">MIRACO</div></div>
+    <div class="listitem-body">
+     <div class="listitem-title">${m.title}</div>
+     <div class="listitem-desc">${m.desc}</div>
+    </div>
+    <div class="listitem-right">
+     <div class="listitem-price">${m.price}</div>
+     <div class="listitem-arrow">›</div>
+    </div>
+   </div>`).join('');
+
+  $('#fMenu').innerHTML=menus.map(m=>`<option>${m.title}</option>`).join('');
+
+  // 管理画面: ステータス変更selectつき
+  $('#adminMenus').innerHTML=menus.map(m=>`
+   <div class="admin-row">
+    <span>${m.title}</span>
+    <span style="color:var(--accent);font-family:Georgia,serif;font-size:11px">${m.price}</span>
+    <span class="tag">公開中</span>
+   </div>`).join('');
+ }
+
+ // ─── Render Detail ───
+ function renderDetail(id){
+  selected=menus.find(m=>m.id===id)||menus[0];
+  $('#detailTitle').textContent=selected.title;
+  $('#detailDesc').textContent=selected.desc;
+  $('#detailRecommend').textContent=selected.rec||'まずは気軽に相談できます。';
+  $('#detailPrice').textContent=selected.price;
+  $('#detailSpecs').innerHTML=(selected.specs||[]).map(s=>`<div class="spec-chip"><b>✓</b> ${s}</div>`).join('');
+  $('#detailChecklist').innerHTML=(selected.includes||[]).map(t=>`
+   <div class="detail-check"><span class="detail-check-icon">✓</span><span class="detail-check-text">${t}</span></div>`).join('');
+  $('#fMenu').value=selected.title;
+ }
+
+ // ─── Render Orders ───
+ function getProgress(status){
+  const map={'ヒアリング中':20,'見積もり中':40,'制作中':65,'確認中':82,'納品済み':100};
+  return map[status]||0;
+ }
+
+ function renderOrders(){
+  $('#sNew').textContent=orders.filter(o=>o.status==='ヒアリング中').length;
+  $('#sDoing').textContent=orders.filter(o=>o.status!=='納品済み').length;
+
+  // 管理画面: ステータス変更ドロップダウン
+  $('#adminOrders').innerHTML=orders.length
+   ?orders.map(o=>`
+    <div class="admin-row">
+     <span style="font-size:11px">#${o.no}<br><span style="color:var(--muted)">${o.name}</span></span>
+     <select class="status-select" data-order="${o.no}">
+      ${STATUS_LIST.map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('')}
+     </select>
+     <span style="color:var(--muted);font-size:11px">${o.date}</span>
+    </div>`).join('')
+   :'<p class="muted" style="padding:14px 0;font-size:12px">まだ依頼はありません。</p>';
+
+  // マイページ
+  if(orders.length){
+   $('#helloUser').textContent=`こんにちは、${orders[orders.length-1].name}さん`;
+   $('#myOrders').innerHTML=orders.slice(-3).reverse().map(o=>`
+    <div class="order-card">
+     <div class="order-card-head">
+      <div><div class="order-id">#${o.no}</div><div class="order-title">${o.menu}</div><div class="order-date">${o.date}</div></div>
+      <span class="status-pill">${o.status}</span>
+     </div>
+     <div class="progress-bar"><div class="progress-fill" style="width:${getProgress(o.status)}%"></div></div>
+     <button class="btn ghost" style="padding:9px 16px;font-size:12px;border-radius:999px;width:auto" data-nav="estimate">詳細を見る</button>
+    </div>`).join('');
+  } else {
+   $('#helloUser').textContent='こんにちは。';
+   $('#myOrders').innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">まだ依頼がありません。<br>気になるメニューから相談してみましょう。</div></div>`;
+  }
+
+  // 見積り: 最新依頼
+  const last=orders[orders.length-1];
+  if(last){
+   $('#estNo').textContent='受付番号 #'+last.no;
+   $('#estTitle').textContent=last.menu;
+   const m=menus.find(x=>x.title===last.menu)||selected;
+   $('#estBase').textContent=yenNum(m.price);
+   $('#estTotal').textContent=yenNum(m.price);
+   $('#estTotalBottom').textContent=yenNum(m.price);
+  } else {
+   $('#estNo').textContent='';
+   $('#estTitle').textContent='依頼がまだありません';
+   $('#estBase').textContent='—';$('#estTotal').textContent='—';$('#estTotalBottom').textContent='—';
+  }
+ }
+
+ // ─── Click delegation ───
+ document.addEventListener('click',e=>{
+  // ステータス変更は伝播させない
+  if(e.target.classList.contains('status-select'))return;
+  const n=e.target.closest('[data-nav]');if(n){nav(n.dataset.nav);return}
+  const d=e.target.closest('[data-detail]');
+  if(d){
+   prevScreen=document.querySelector('.screen.active')?.id||'menu';
+   renderDetail(d.dataset.detail);nav('detail');return;
+  }
+  if(e.target.closest('[data-drawer]')){$('#drawer').classList.add('on');return}
+  if(e.target.closest('[data-close]')||e.target.id==='drawer'){$('#drawer').classList.remove('on');return}
+ });
+
+ // 管理画面ステータス変更
+ document.addEventListener('change',e=>{
+  if(e.target.classList.contains('status-select')){
+   const no=e.target.dataset.order;
+   const o=orders.find(x=>x.no===no);
+   if(o){o.status=e.target.value;save();renderOrders();toast('ステータスを更新しました');}
+  }
+ });
+
+ // 詳細ページ戻るボタン
+ $('#detailBack').onclick=()=>nav(prevScreen);
+
+ // File upload UI
+ document.querySelector('.file-upload').addEventListener('click',()=>$('#fFile').click());
+ $('#fFile').addEventListener('change',e=>{
+  const f=e.target.files[0];
+  if(f){document.querySelector('.file-upload-text').innerHTML=`<b>${f.name}</b><br><span style="font-size:10px;color:var(--ok)">✓ 選択済み</span>`;}
+ });
+
+ // ─── フォームバリデーション ───
+ function validateField(el,msg){
+  el.classList.remove('error');
+  el.parentNode.querySelector('.form-error')?.remove();
+  if(!el.value.trim()){
+   el.classList.add('error');
+   const err=document.createElement('div');err.className='form-error';err.textContent=msg;
+   el.parentNode.appendChild(err);return false;
+  }
+  return true;
+ }
+
+ $('#toConfirm').onclick=()=>{
+  const nameEl=$('#fName'),emailEl=$('#fEmail');
+  let ok=true;
+  if(!validateField(nameEl,'お名前を入力してください'))ok=false;
+  if(!validateField(emailEl,'メールアドレスを入力してください'))ok=false;
+  if(emailEl.value&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)){
+   emailEl.classList.add('error');
+   emailEl.parentNode.querySelector('.form-error')?.remove();
+   const err=document.createElement('div');err.className='form-error';err.textContent='正しいメールアドレスを入力してください';
+   emailEl.parentNode.appendChild(err);ok=false;
+  }
+  if(!ok){nameEl.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  draft={
+   name:$('#fName').value,email:$('#fEmail').value,
+   line:$('#fLine').value,menu:$('#fMenu').value,
+   msg:$('#fMsg').value,due:$('#fDue').value,pay:$('#fPay').value
+  };
+  $('#confirmBox').innerHTML=`
+   <div class="confirm-row"><span class="confirm-label">お名前</span><span class="confirm-val">${draft.name}</span></div>
+   <div class="confirm-row"><span class="confirm-label">メール</span><span class="confirm-val">${draft.email}</span></div>
+   <div class="confirm-row"><span class="confirm-label">LINE</span><span class="confirm-val">${draft.line||'未入力'}</span></div>
+   <div class="confirm-row"><span class="confirm-label">メニュー</span><span class="confirm-val">${draft.menu}</span></div>
+   <div class="confirm-row"><span class="confirm-label">ご相談</span><span class="confirm-val">${draft.msg||'未入力'}</span></div>
+   <div class="confirm-row"><span class="confirm-label">希望納期</span><span class="confirm-val">${draft.due||'未定'}</span></div>
+   <div class="confirm-row"><span class="confirm-label">お支払い</span><span class="confirm-val">${draft.pay}</span></div>`;
+  nav('confirm');
+ };
+
+ $('#submitOrder').onclick=()=>{
+  const no=String(Date.now()).slice(-6);
+  orders.push({...draft,no,status:'ヒアリング中',date:new Date().toISOString().slice(0,10)});
+  save();
+  $('#receiptNo').textContent='#'+no;
+  // フォームリセット
+  ['#fName','#fEmail','#fLine','#fMsg','#fDue'].forEach(s=>{$(s).value='';$(s).classList.remove('error');});
+  $$('#apply .form-error').forEach(e=>e.remove());
+  document.querySelector('.file-upload-text').innerHTML='タップして画像を選択<br><span style="font-size:10px">PNG / JPG / PDF</span>';
+  nav('complete');
+ };
+
+ // ─── Chat ───
+ function scrollChat(){const c=$('#chatBody');c.scrollTop=c.scrollHeight;}
+ $('#sendChat').onclick=()=>{
+  const v=$('#chatInput').value.trim();if(!v)return;
+  const now=new Date();const t=now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+  $('#chatBody').insertAdjacentHTML('beforeend',`<div class="bubble-wrap me"><div class="bubble me">${v}</div><div class="bubble-time">${t}</div></div>`);
+  $('#chatInput').value='';scrollChat();
+  setTimeout(()=>{
+   $('#chatBody').insertAdjacentHTML('beforeend',`<div class="bubble-wrap you"><div class="bubble you">確認しました。ありがとうございます！</div><div class="bubble-time">${t}</div></div>`);
+   scrollChat();
+  },600);
+ };
+ $('#chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#sendChat').click();}});
+
+ // ─── Pay ───
+ $('#finishPay').onclick=()=>{
+  if(orders.length){orders[orders.length-1].status='制作中';save();}
+  toast('お支払いを受け付けました');
+  nav('delivery');
+ };
+
+ // ─── Delivery ───
+ $('#downloadBtn').onclick=()=>toast('データのダウンロードリンクをメールでお送りします（デモ）');
+ $('#reviewBtn').onclick=()=>toast('レビューフォームは準備中です。ありがとうございます！');
+
+ // ─── LINE ───
+ $('#lineAddBtn').onclick=()=>toast('LINEの友達追加リンクは後日設定されます（デモ）');
+
+ // ─── Admin ───
+ $('#addMenuBtn').onclick=()=>{
+  const title=$('#aTitle').value.trim();
+  if(!title){toast('メニュー名を入力してください');return;}
+  menus.push({id:'m'+Date.now(),title,desc:$('#aDesc').value||'新しいサポートメニューです。',price:$('#aPrice').value||'お見積り',due:$('#aDue').value||'要相談',rec:'必要に合わせて個別にサポートします。',specs:[],includes:[]});
+  save();$('#aTitle').value=$('#aDesc').value=$('#aPrice').value=$('#aDue').value='';
+  toast('メニューを追加しました');nav('admin');
+ };
+
+ $('#resetDemo').onclick=()=>{
+  if(!confirm('デモデータをリセットしますか？'))return;
+  localStorage.removeItem('miraco_menus');localStorage.removeItem('miraco_orders');
+  menus=defaults;orders=[];save();renderMenus();renderOrders();toast('リセットしました');
+ };
+
+ renderMenus();renderOrders();
+})();
+</script>
+</body>
+</html>
