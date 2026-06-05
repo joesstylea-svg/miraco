@@ -502,7 +502,7 @@
   .aorder-name{font-size:14px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .aorder-num{font-family:var(--num-font);font-size:10px;color:var(--muted);font-weight:700}
   .aorder-tag{font-size:10px;border-radius:999px;padding:3px 9px;font-weight:600;white-space:nowrap;background:var(--accent-light);color:var(--accent)}
-  .aorder-meta{font-size:12px;color:var(--muted)}
+  .aorder-meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .aorder-badges{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}
   .aorder-b{font-size:10px;border-radius:999px;padding:2px 9px;font-weight:600;font-family:var(--num-font)}
   .aorder-b.paid{background:#eaf4ee;color:#2f7a52}
@@ -656,6 +656,7 @@
   .field-opt-add:hover{background:var(--paper);color:var(--accent)}
   /* ─── Order Modal ─── */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+  #previewModal{align-items:flex-start;padding-top:max(16px,env(safe-area-inset-top))}
   .modal-overlay.on{display:flex}
   .modal-panel{
     background:var(--bg);border-radius:var(--r-lg);
@@ -901,9 +902,7 @@
   <p class="page-lead" id="homeLead"></p>
 
   <div class="px-btn" style="margin-bottom:20px">
-    <button class="btn primary" data-nav="menu" style="border-radius:999px">
-      困ったことを相談してみる &nbsp;→
-    </button>
+    <button class="btn primary" id="homeCtaBtn" data-nav="menu" style="border-radius:999px">困ったことを相談してみる →</button>
   </div>
 
   <div class="home-hero" id="homeHero" style="margin-bottom:28px">
@@ -934,7 +933,6 @@
 <!-- ═══ MENU ═══ -->
 <section class="screen" id="menu">
   <div class="page-head"><h2 id="menuPageTitle">メニュー一覧</h2></div>
-  <p class="muted" style="padding:0 20px;margin-bottom:16px">気になるものを選んでください。</p>
   <div class="list-items" id="menuList"></div>
 </section>
 
@@ -1149,6 +1147,11 @@
       <div class="form-hint">左＝サービスの呼び方（例：講座/コース/プラン）、右＝申し込みの呼び方（例：予約/鑑定）。空欄なら標準。</div>
     </div>
     <div style="padding:0 20px;margin-top:14px">
+      <label style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px">公開URL（QRコード用）</label>
+      <input id="publicUrlInput" placeholder="https://joesstylea-svg.github.io/miraco/" style="width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font-size:15px;outline:none;color:var(--ink);font-family:inherit">
+      <div class="form-hint">QRコードに使うURLです。GitHub PagesのURLを入力してください。</div>
+    </div>
+    <div style="padding:0 20px;margin-top:14px">
       <label style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px">運営者パスワード</label>
       <input id="adminPassInput" placeholder="miraco" style="width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font-size:15px;outline:none;color:var(--ink);font-family:inherit">
       <div class="form-hint">管理画面に入るためのパスワードです。</div>
@@ -1251,6 +1254,7 @@
     <div class="form-group"><label>メイン見出し</label><textarea id="hTitle" style="min-height:90px"></textarea><div class="form-hint">改行で折り返し。*アスタリスク*で囲むと茶色の強調になります。</div></div>
     <div class="form-group"><label>英語キャッチ（飾り・任意）</label><input id="hEn" placeholder="We support your first step."><div class="form-hint">空欄にすると非表示になります。</div></div>
     <div class="form-group"><label>リード文</label><textarea id="hLead" style="min-height:80px"></textarea></div>
+    <div class="form-group"><label>CTAボタン文字</label><input id="hCtaText" placeholder="困ったことを相談してみる →"></div>
     <div class="form-group"><label>ヒーロー画像のバッジ文言</label><input id="hHeroBadge" placeholder="MIRACOサポート"></div>
     <div class="form-group"><label>ヒーローカード見出し</label><input id="hCardTitle"></div>
     <div class="form-group"><label>ヒーローカード補足</label><input id="hCardSub"></div>
@@ -1492,6 +1496,7 @@
  const STATUS_LIST=['ヒアリング中','見積もり中','制作中','確認中','納品済み'];
 
  const siteDefaults={
+  publicUrl:'', // QRコードに使う公開URL（GitHub PagesのURLなど）
   adminPass:'miraco', // 管理画面パスワード（デフォルト）
   termService:'メニュー', // サービスの呼び方
   termRequest:'申し込み', // 申し込みの呼び方
@@ -1501,6 +1506,7 @@
   logoImage:'', // 設定するとヘッダーがロゴ画像に
   homeTitle:'ユーワードに入ったけど、\nどうしたらいいかわからない…を、\n*やさしくサポートします。*',
   homeEn:'We support your first step.',
+  homeCtaText:'困ったことを相談してみる →',
   homeLead:'小さな「困った」を気軽に相談できる場所。名刺づくり、アイキャッチ、出店準備、ホームページ設定など、あなたの活動をそっと後押しします。',
   homeHeroBadge:'MIRACOサポート',
   homeHeroCardTitle:'「何から始めたらいい？」を一緒に整理します',
@@ -1533,10 +1539,10 @@
  // カラーテーマ（accent=メイン色 / accent2=明るいアクセント / deep=濃いアクセント(白文字用) / light=淡い背景）
  const THEMES=[
   {name:'ネイビー × オレンジ',accent:'#235180',accent2:'#FFA62E',deep:'#F0820F',light:'#FFF1E0'},
-  {name:'モスグリーン × テラコッタ',accent:'#46624F',accent2:'#E59A6B',deep:'#CE7144',light:'#F6ECE3'},
-  {name:'プラム × ローズ',accent:'#5E4566',accent2:'#E587A6',deep:'#CB5E83',light:'#FBEAF1'},
-  {name:'チャコール × からし',accent:'#363636',accent2:'#E0B24A',deep:'#C2902B',light:'#F6F0DF'},
-  {name:'ティール × コーラル',accent:'#1F6F6B',accent2:'#FF9583',deep:'#E96F5B',light:'#FFEDE8'}
+  {name:'テラコッタ × ゴールド',accent:'#8B3A26',accent2:'#DDB03A',deep:'#C09020',light:'#FBF6E6'},
+  {name:'インディゴ × ピーチ',accent:'#2E3E80',accent2:'#FF8C6B',deep:'#E86B48',light:'#FFF0EA'},
+  {name:'フォレスト × アクア',accent:'#244D38',accent2:'#3DBFB0',deep:'#2BA898',light:'#E6F8F5'},
+  {name:'バーガンディ × ラベンダー',accent:'#6B1D40',accent2:'#9B78D4',deep:'#7A58C0',light:'#F0EBFC'}
  ];
  function applyTheme(idx){
   const t=THEMES[idx]||THEMES[0];const r=document.documentElement.style;
@@ -1571,6 +1577,7 @@
  function ymd(d){const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
  function dateAfter(days){const d=new Date();d.setDate(d.getDate()+(days||0));return ymd(d);}
  function ymdJP(s){if(!s)return'';const[y,m,d]=s.split('-');return`${y}年${+m}月${+d}日`;}
+ function ymdSlash(s){if(!s)return'';const[y,m,d]=s.split('-');return`${+m}/${+d}`;}
  const $=s=>document.querySelector(s);
  const $$=s=>Array.from(document.querySelectorAll(s));
  // ─── Supabase（クラウド同期）───
@@ -1675,6 +1682,7 @@
   $('#homeEn').textContent=siteContent.homeEn||'';
   $('#homeEn').style.display=(siteContent.homeEn||'').trim()?'':'none';
   $('#homeLead').textContent=siteContent.homeLead;
+  $('#homeCtaBtn').textContent=siteContent.homeCtaText||'困ったことを相談してみる →';
   $('#homeHeroCardTitle').textContent=siteContent.homeHeroCardTitle;
   $('#homeHeroCardSub').textContent=siteContent.homeHeroCardSub;
   const hero=$('#homeHero');
@@ -2270,6 +2278,11 @@
   const m=menus.find(x=>x.title===o.menu);
   return (m&&m.due)||'要相談';
  }
+ function orderDueShort(o){
+  if(o.due){return ymdSlash(o.due);}
+  const m=menus.find(x=>x.title===o.menu);
+  return (m&&m.due)||'未定';
+ }
  // 納期超過：希望納期(日付)が過ぎていて未納品
  function isOverdue(o){
   if(!o.due||o.status==='納品済み'||o.archived)return false;
@@ -2566,7 +2579,7 @@
       <span class="aorder-num">#${o.no}</span>
       <span class="aorder-tag">${esc(o.status)}</span>
      </div>
-     <div class="aorder-meta">${esc(o.menu)}　/　受注 ${o.date}　/　納期 ${esc(orderDue(o))}</div>
+     <div class="aorder-meta">${esc(o.menu)}　受注 ${ymdSlash(o.date)}・納期 ${esc(orderDueShort(o))}</div>
      <div class="aorder-badges">
       ${o.paid?'<span class="aorder-b paid">✓支払済</span>':'<span class="aorder-b unpaid">未入金</span>'}
       ${o.assignee?`<span class="aorder-b assignee">担当 ${esc(o.assignee)}</span>`:''}
@@ -2616,7 +2629,7 @@
      <div class="order-card-head">
       <div style="min-width:0">
        <div class="order-title">${esc(o.menu)}</div>
-       <div class="order-metaline">受注 ${o.date}　/　納期目安 ${esc(due)}</div>
+       <div class="order-metaline">受注 ${ymdJP(o.date)}　/　納期目安 ${esc(due)}</div>
       </div>
       <span class="status-pill">${o.status}</span>
      </div>
@@ -2638,7 +2651,7 @@
     return `<div class="hist-item" data-myorder="${o.no}">
      <div class="hist-item-info">
       <div class="hist-item-title">${esc(o.menu)}</div>
-      <div class="hist-item-meta">受注 ${o.date}</div>
+      <div class="hist-item-meta">受注 ${ymdJP(o.date)}</div>
      </div>
      <span class="hist-tag ${o.paid?'paid':'done'}">${o.paid?'支払い済み':o.status}</span>
      <span class="hist-item-amt">${yenFmt(q.total)}</span>
@@ -3035,6 +3048,7 @@
   $('#ownerLineUrl').value=siteContent.ownerLineUrl||'';
   $('#termService').value=siteContent.termService||'';
   $('#termRequest').value=siteContent.termRequest||'';
+  $('#publicUrlInput').value=siteContent.publicUrl||'';
   $('#adminPassInput').value=siteContent.adminPass||'';
  }
  $('#contactModeSel').addEventListener('change',e=>{
@@ -3043,13 +3057,14 @@
  $('#ownerLineUrl').addEventListener('input',e=>{siteContent.ownerLineUrl=e.target.value.trim();save();});
  $('#termService').addEventListener('input',e=>{siteContent.termService=e.target.value||'メニュー';save();renderSite();});
  $('#termRequest').addEventListener('input',e=>{siteContent.termRequest=e.target.value||'申し込み';save();renderSite();});
+ $('#publicUrlInput').addEventListener('input',e=>{siteContent.publicUrl=e.target.value.trim();save();});
  $('#adminPassInput').addEventListener('input',e=>{siteContent.adminPass=e.target.value||'miraco';save();});
 
  // ─── LINE ───
  $('#lineAddBtn').onclick=()=>toast('LINEの友達追加リンクは後日設定されます（デモ）');
 
  // ─── 共有・QR ───
- function shareUrl(){return location.href.split('#')[0].split('?')[0];}
+ function shareUrl(){return (siteContent.publicUrl&&siteContent.publicUrl.startsWith('http'))?siteContent.publicUrl:location.href.split('#')[0].split('?')[0];}
  function openShare(){
   const url=shareUrl();
   $('#shareQR').src=`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=${encodeURIComponent(url)}`;
@@ -3083,6 +3098,7 @@
   $('#hTitle').value=siteContent.homeTitle;
   $('#hEn').value=siteContent.homeEn||'';
   $('#hLead').value=siteContent.homeLead;
+  $('#hCtaText').value=siteContent.homeCtaText||'困ったことを相談してみる →';
   $('#hHeroBadge').value=siteContent.homeHeroBadge||'';
   $('#hCardTitle').value=siteContent.homeHeroCardTitle;
   $('#hCardSub').value=siteContent.homeHeroCardSub;
@@ -3108,6 +3124,7 @@
   siteContent.homeTitle=$('#hTitle').value;
   siteContent.homeEn=$('#hEn').value;
   siteContent.homeLead=$('#hLead').value;
+  siteContent.homeCtaText=$('#hCtaText').value||'困ったことを相談してみる →';
   siteContent.homeHeroBadge=$('#hHeroBadge').value;
   siteContent.homeHeroCardTitle=$('#hCardTitle').value;
   siteContent.homeHeroCardSub=$('#hCardSub').value;
