@@ -3213,6 +3213,28 @@
   if(!cloud||cloud.menus==null){sbSet('menus',menus);sbSet('orders',orders);sbSet('site',siteContent);}
   if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
   renderMenus();renderOrders();renderSite();
+  startSync();
+ }
+ // ─── 近リアルタイム同期（クラウドを定期確認して自動反映）───
+ function startSync(){
+  const J=v=>JSON.stringify(v);
+  const editScreens=['adminHome','adminGallery','adminEdit','adminPayment','adminReviews','apply'];
+  setInterval(async()=>{
+   // 入力中は触らない（タイプ・編集の邪魔をしない）
+   const ae=document.activeElement;
+   if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))return;
+   const cloud=await sbGetAll();if(!cloud)return;
+   let changed=false;
+   if(cloud.orders&&J(cloud.orders)!==J(orders)){orders=cloud.orders;changed=true;}
+   if(cloud.menus&&J(cloud.menus)!==J(menus)){menus=cloud.menus;changed=true;}
+   if(cloud.site&&J(cloud.site)!==J(siteContent)){siteContent=Object.assign({},siteDefaults,cloud.site);changed=true;}
+   if(!changed)return;
+   if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
+   const active=document.querySelector('.screen.active')?.id;
+   if(editScreens.includes(active))return; // 編集中の画面は再描画しない（データだけ更新）
+   renderMenus();renderOrders();renderSite();
+   if(active==='chat')renderChat(); // チャット中なら新着メッセージを反映
+  },12000);
  }
  boot();
 })();
