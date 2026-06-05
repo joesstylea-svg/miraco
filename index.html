@@ -2504,8 +2504,8 @@
    return sum+(q.total||0);
   },0);
   const sEl=$('#sSales');if(sEl)sEl.textContent='¥'+sales.toLocaleString();
-  // 管理側バッジ：未開封の新規 or お客様からの未読あり（アーカイブ除く）→開けば消える
-  const attention=orders.filter(o=>!o.archived&&((o.status==='ヒアリング中'&&!o.adminViewed)||unreadCount(o,'admin')>0)).length;
+  // 管理側バッジ：運営者ログイン時のみ表示（お客様には見せない）
+  const attention=adminAuthed?orders.filter(o=>!o.archived&&((o.status==='ヒアリング中'&&!o.adminViewed)||unreadCount(o,'admin')>0)).length:0;
   const hb=$('#hdrBadge');if(hb){hb.textContent=attention;hb.style.display=attention?'flex':'none';}
   const db=$('#drawerAdminBadge');if(db){db.textContent=attention;db.style.display=attention?'inline-flex':'none';}
 
