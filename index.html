@@ -4,6 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>MIRACO</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#235180">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MIRACO">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -1113,6 +1120,7 @@
       <button class="admin-tool-btn" id="editGalleryBtn"><b>ギャラリーを編集</b><span>実績・お客様の声</span></button>
       <button class="admin-tool-btn" id="editPaymentBtn"><b>お支払い方法を編集</b><span>方法・リンク・案内文</span></button>
       <button class="admin-tool-btn" id="reviewsBtn"><b>レビュー管理</b><span id="reviewsBtnSub">公開を選ぶ</span></button>
+      <button class="admin-tool-btn" data-share><b>QRコード・共有</b><span>名刺・お披露目に</span></button>
     </div>
     <div style="padding:0 20px;margin-top:14px">
       <label style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:8px">カラーテーマ</label>
@@ -1410,6 +1418,7 @@
       <button data-nav="menu" id="drawerMenuLink">メニュー一覧</button>
       <button data-nav="gallery">ギャラリー・実績</button>
       <button data-nav="mypage">マイページ</button>
+      <button data-share>📱 このアプリを共有 / QR</button>
     </div>
     <div class="drawer-foot">
       <button class="drawer-close-btn" data-close>
@@ -1428,6 +1437,27 @@
 </div>
 <div class="toast" id="toast"></div>
 <div class="lightbox" id="lightbox"><img id="lightboxImg" src="" alt=""></div>
+<!-- ═══ 共有・QRモーダル ═══ -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal-panel" style="max-width:360px">
+    <div class="modal-head"><h3>このアプリを共有</h3><button class="iconbtn" id="shareClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body" style="text-align:center">
+      <img id="shareQR" alt="QRコード" style="width:200px;height:200px;border:1px solid var(--line);border-radius:12px;padding:8px;background:#fff">
+      <p class="muted" style="font-size:12px;margin:10px 0 4px">QRを読み取ると、このページが開きます。<br>名刺代わりに「ここから相談・注文できます」とご案内ください。</p>
+      <div id="shareUrl" style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:12px"></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn primary" id="shareNative" style="border-radius:999px">共有する</button>
+        <button class="btn ghost" id="shareCopy" style="border-radius:999px">URLをコピー</button>
+      </div>
+      <details class="line-help" style="margin-top:14px;text-align:left">
+        <summary>📱 ホーム画面に追加する方法（アプリのように使う）</summary>
+        <p class="line-help-note" style="padding-top:6px"><b>iPhone（Safari）</b><br>下の「共有」ボタン → 「ホーム画面に追加」</p>
+        <p class="line-help-note"><b>Android（Chrome）</b><br>右上「︙」メニュー → 「ホーム画面に追加」/「アプリをインストール」</p>
+        <p class="line-help-note">追加すると、アイコンからアプリのように一発で開けます。</p>
+      </details>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="previewModal">
   <div class="modal-panel" style="max-width:430px;max-height:90vh">
     <div class="modal-head"><h3 id="previewTitle">プレビュー</h3><button class="iconbtn" id="previewClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
@@ -2730,6 +2760,7 @@
    prevScreen=document.querySelector('.screen.active')?.id||'menu';
    renderDetail(d.dataset.detail);nav('detail');return;
   }
+  if(e.target.closest('[data-share]')){openShare();$('#drawer').classList.remove('on');return;}
   if(e.target.closest('#adminGearBtn')){
    if(!adminAuthed){const p=prompt('運営者パスワードを入力してください');if(p===null)return;if(p!==(siteContent.adminPass||'miraco')){toast('パスワードが違います');return;}adminAuthed=true;}
    $('#drawer').classList.remove('on');nav('admin');return;
@@ -3012,6 +3043,19 @@
 
  // ─── LINE ───
  $('#lineAddBtn').onclick=()=>toast('LINEの友達追加リンクは後日設定されます（デモ）');
+
+ // ─── 共有・QR ───
+ function shareUrl(){return location.href.split('#')[0].split('?')[0];}
+ function openShare(){
+  const url=shareUrl();
+  $('#shareQR').src=`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=${encodeURIComponent(url)}`;
+  $('#shareUrl').textContent=url;
+  $('#shareModal').classList.add('on');
+ }
+ $('#shareClose').onclick=()=>$('#shareModal').classList.remove('on');
+ $('#shareModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('on');});
+ $('#shareCopy').onclick=()=>{const u=shareUrl();if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(()=>toast('URLをコピーしました')).catch(()=>toast(u));}else toast(u);};
+ $('#shareNative').onclick=()=>{const u=shareUrl();if(navigator.share){navigator.share({title:(siteContent.brandName||'MIRACO'),text:'ここから相談・ご注文いただけます',url:u}).catch(()=>{});}else{$('#shareCopy').click();}};
 
  // ─── Menu image upload ───
  $('#eImgFile').addEventListener('change',e=>{
