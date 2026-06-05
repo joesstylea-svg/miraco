@@ -3099,8 +3099,8 @@
  function applyHomeEdits(){
   siteContent.brandName=$('#hBrandName').value||'MIRACO';
   siteContent.brandSub=$('#hBrandSub').value||'';
-  const logo=$('#hLogoPreview').src;
-  siteContent.logoImage=(logo&&(logo.startsWith('data:')||logo.startsWith('http')))?logo:'';
+  const logo=$('#hLogoPreview').getAttribute('src')||'';
+  siteContent.logoImage=logo.startsWith('data:')?logo:'';
   siteContent.homeTitle=$('#hTitle').value;
   siteContent.homeEn=$('#hEn').value;
   siteContent.homeLead=$('#hLead').value;
@@ -3111,8 +3111,8 @@
   siteContent.homeWorriesLabel=$('#hWorriesLabel').value;
   siteContent.homeWorries=$('#hWorries').value.split('\n').map(s=>s.trim()).filter(Boolean);
   siteContent.homeBlocks=JSON.parse(JSON.stringify(editingHomeBlocks));
-  const src=$('#hImgPreview').src;
-  siteContent.homeImage=(src&&(src.startsWith('data:')||src.startsWith('http')))?src:'';
+  const src=$('#hImgPreview').getAttribute('src')||'';
+  siteContent.homeImage=src.startsWith('data:')?src:'';
  }
  $('#saveHomeBtn').onclick=()=>{
   applyHomeEdits();
