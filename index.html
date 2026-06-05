@@ -1541,15 +1541,30 @@
  function ymdJP(s){if(!s)return'';const[y,m,d]=s.split('-');return`${y}年${+m}月${+d}日`;}
  const $=s=>document.querySelector(s);
  const $$=s=>Array.from(document.querySelectorAll(s));
- // ─── Storage: IndexedDB（localStorageの5MB上限を回避、画像も余裕で保存）───
+ // ─── Supabase（クラウド同期）───
+ const SB_URL='https://kjnxptncrfaoklkkhtyp.supabase.co/rest/v1';
+ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbnhwdG5jcmZhb2tsa2todHlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NjgyNDEsImV4cCI6MjA5NjI0NDI0MX0.Oqj0P1BVOxokbhnM4xenQR_V3XsOylv4lykrQkX-qxU';
+ const SB_H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+ let sbOn=true; // 接続失敗時はfalse
+ async function sbGetAll(){
+  try{const r=await fetch(`${SB_URL}/app_data?select=key,value`,{headers:SB_H});if(!r.ok)return null;const rows=await r.json();const o={};rows.forEach(x=>o[x.key]=x.value);return o;}catch(e){sbOn=false;return null;}
+ }
+ function sbSet(key,value){
+  if(!sbOn)return;
+  fetch(`${SB_URL}/app_data`,{method:'POST',headers:{...SB_H,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify([{key,value}])}).catch(()=>{sbOn=false;});
+ }
+
+ // ─── Storage: IndexedDB（オフラインキャッシュ）───
  const DB_NAME='miraco_db',STORE='kv';let _db=null;
  function idbOpen(){return new Promise((res,rej)=>{try{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
  function idbGet(k){return new Promise(res=>{if(!_db)return res(null);try{const t=_db.transaction(STORE,'readonly').objectStore(STORE).get(k);t.onsuccess=()=>res(t.result??null);t.onerror=()=>res(null);}catch(e){res(null);}});}
  function idbSet(k,v){return new Promise(res=>{if(!_db)return res(false);try{const t=_db.transaction(STORE,'readwrite').objectStore(STORE).put(v,k);t.onsuccess=()=>res(true);t.onerror=()=>res(false);}catch(e){res(false);}});}
  function save(){
-  if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);return;}
-  // フォールバック（IDB不可の旧環境）
-  try{localStorage.setItem('miraco_menus',JSON.stringify(menus));localStorage.setItem('miraco_orders',JSON.stringify(orders));localStorage.setItem('miraco_site',JSON.stringify(siteContent));}catch(e){}
+  // ローカルキャッシュ（オフライン用）
+  if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
+  else{try{localStorage.setItem('miraco_menus',JSON.stringify(menus));localStorage.setItem('miraco_orders',JSON.stringify(orders));localStorage.setItem('miraco_site',JSON.stringify(siteContent));}catch(e){}}
+  // クラウド（Supabase）
+  sbSet('menus',menus);sbSet('orders',orders);sbSet('site',siteContent);
  }
  function yenNum(s){const m=(s||'').match(/[0-9,]+/);return m?'¥'+m[0]:s}
 
@@ -3176,18 +3191,27 @@
   menus=defaults.slice();orders=[];siteContent=JSON.parse(JSON.stringify(siteDefaults));selected=menus[0];save();renderMenus();renderOrders();renderSite();toast('リセットしました');
  };
 
- // ─── 起動：IndexedDBから読込（無ければ旧localStorageから移行）───
+ // ─── 起動：Supabase優先→なければIndexedDB/localStorage ───
  async function boot(){
   try{_db=await idbOpen();}catch(e){_db=null;}
-  let m=await idbGet('menus'),o=await idbGet('orders'),s=await idbGet('site');
-  if(!m){try{const ls=localStorage.getItem('miraco_menus');if(ls)m=JSON.parse(ls);}catch(e){}}
-  if(!o){try{const ls=localStorage.getItem('miraco_orders');if(ls)o=JSON.parse(ls);}catch(e){}}
-  if(!s){try{const ls=localStorage.getItem('miraco_site');if(ls)s=JSON.parse(ls);}catch(e){}}
+  let m,o,s;
+  // クラウド優先
+  const cloud=await sbGetAll();
+  if(cloud){m=cloud.menus;o=cloud.orders;s=cloud.site;}
+  // フォールバック：IDB→localStorage
+  if(m==null)m=await idbGet('menus');
+  if(o==null)o=await idbGet('orders');
+  if(s==null)s=await idbGet('site');
+  if(m==null){try{const ls=localStorage.getItem('miraco_menus');if(ls)m=JSON.parse(ls);}catch(e){}}
+  if(o==null){try{const ls=localStorage.getItem('miraco_orders');if(ls)o=JSON.parse(ls);}catch(e){}}
+  if(s==null){try{const ls=localStorage.getItem('miraco_site');if(ls)s=JSON.parse(ls);}catch(e){}}
   menus=(Array.isArray(m)&&m.length)?m:defaults.slice();
   orders=Array.isArray(o)?o:[];
   siteContent=Object.assign({},siteDefaults,s||{});
   selected=menus[0];
-  save(); // IDBへ確定（移行込み）
+  // 初回（クラウド空）ならデフォルトをクラウドへ。IDBにもキャッシュ
+  if(!cloud||cloud.menus==null){sbSet('menus',menus);sbSet('orders',orders);sbSet('site',siteContent);}
+  if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
   renderMenus();renderOrders();renderSite();
  }
  boot();
