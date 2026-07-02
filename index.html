@@ -317,6 +317,10 @@
   .file-upload:hover{border-color:var(--accent)}
   .file-upload-icon{font-size:22px;margin-bottom:6px;color:var(--muted)}
   .file-upload-text{font-size:12px;color:var(--muted)}
+  .upload-preview{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--card)}
+  .upload-preview img{width:100%;max-height:180px;object-fit:contain;background:var(--paper);display:block}
+  .upload-preview-meta{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;font-size:11px;color:var(--muted)}
+  .upload-preview-name{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ─── Confirm ─── */
   .confirm-row{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
@@ -1217,6 +1221,7 @@
   <div class="add-block-row" style="margin:8px 0 4px">
     <button class="add-block-btn" data-field-add="text">＋ テキスト</button>
     <button class="add-block-btn" data-field-add="textarea">＋ 複数行</button>
+    <button class="add-block-btn" data-field-add="image">＋ 画像</button>
     <button class="add-block-btn" data-field-add="radio">＋ ラジオ</button>
     <button class="add-block-btn" data-field-add="checkbox">＋ チェック</button>
   </div>
@@ -1557,7 +1562,7 @@
  let siteContent=Object.assign({},siteDefaults);
  let editingGalleryBlocks=[];let showArchived=false;let editingPayMethods=[];let payOrderNo=null;let orderFilter='all';let editingHomeBlocks=[];
  let adminAuthed=false;
- let currentUser=localStorage.getItem('miraco_user')||''; // ログイン中のお客様メール（デモ）
+ let currentUser=''; // ログイン中のお客様メール（端末には保存しない）
  let selected=menus[0];let draft={};
  let prevScreen='menu';
  let editingMenu=null;let editingBlocks=[];let editingMenuId=null;let editingFormFields=[];
@@ -1565,6 +1570,29 @@
  function normalizeOptions(opts){return(opts||[]).map(o=>typeof o==='string'?{label:o,image:'',price:''}:Object.assign({label:'',image:'',price:''},o));}
  function priceNum(v){if(typeof v==='number')return v;const m=String(v||'').match(/[0-9,]+/);return m?parseInt(m[0].replace(/,/g,''),10):0;}
  function yenFmt(n){return '¥'+(n||0).toLocaleString();}
+ function fileSizeFmt(n){if(!n)return'';return n>=1048576?(n/1048576).toFixed(1)+'MB':Math.ceil(n/1024)+'KB';}
+ function uploadInfoText(v){return v&&typeof v==='object'?[v.name||'画像ファイル',fileSizeFmt(v.size)].filter(Boolean).join(' / '):String(v||'');}
+function uploadPreviewHTML(v){
+  if(!v||typeof v!=='object')return '';
+  const meta=uploadInfoText(v);
+  const name=v.name||'miraco-upload.jpg';
+  const action=v.url?`<button type="button" class="deliv-dl" data-upload-download="${esc(v.url)}" data-upload-name="${esc(name)}">ダウンロード</button>`:'';
+  return `<div class="upload-preview">${v.url?`<img src="${esc(v.url)}" alt="${esc(v.name||'アップロード画像')}" data-lightbox="${esc(v.url)}">`:''}<div class="upload-preview-meta"><span class="upload-preview-name">${esc(v.name||'画像ファイル')}</span><span>${esc(fileSizeFmt(v.size))}</span>${action}</div></div>${v.originalNote?`<div class="form-hint">${esc(v.originalNote)}</div>`:''}`;
+ }
+ function customFieldRowsHTML(fields,compact){
+  return Object.entries(fields||{}).filter(([k,v])=>v&&(typeof v!=='object'||v.name||v.url)).map(([k,v])=>{
+   const val=typeof v==='object'?`${esc(uploadInfoText(v))}${v.url?uploadPreviewHTML(v):''}`:esc(v);
+   return `<div class="confirm-row"><span class="confirm-label" style="font-size:10px;width:${compact?'78px':'88px'}">${esc(k)}</span><span class="confirm-val">${val}</span></div>`;
+  }).join('');
+ }
+ function customFieldRowsArray(fields){
+  return Object.entries(fields||{}).filter(([k,v])=>v&&(typeof v!=='object'||v.name||v.url)).map(([k,v])=>['　'+k,typeof v==='object'?uploadInfoText(v):v]);
+ }
+ function customUploadsHTML(fields){
+  const imgs=Object.entries(fields||{}).filter(([,v])=>v&&typeof v==='object'&&v.url);
+  if(!imgs.length)return '';
+  return `<div class="om-thread"><div class="om-thread-label">添付画像</div>${imgs.map(([k,v])=>`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">${esc(k)}</div>${uploadPreviewHTML(v)}</div>`).join('')}</div>`;
+ }
  // レビュー：名前マスク・公開済み取得・カード
  function maskName(name){const t=(name||'').trim();if(!t)return 'ゲスト さん';const c=t.charAt(0);return (/[A-Za-z]/.test(c)?c.toUpperCase():c)+' さん';}
  function publishedReviews(){return orders.filter(o=>o.review&&o.review.published).map(o=>o.review).reverse();}
@@ -1582,6 +1610,8 @@
  const $$=s=>Array.from(document.querySelectorAll(s));
  // ─── Supabase（クラウド同期）───
  const SB_URL='https://kjnxptncrfaoklkkhtyp.supabase.co/rest/v1';
+ const SB_BASE=SB_URL.replace('/rest/v1','');
+ const SB_UPLOAD_BUCKET='miraco-uploads';
  const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbnhwdG5jcmZhb2tsa2todHlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NjgyNDEsImV4cCI6MjA5NjI0NDI0MX0.Oqj0P1BVOxokbhnM4xenQR_V3XsOylv4lykrQkX-qxU';
  const SB_H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
  let sbOn=true; // 接続失敗時はfalse
@@ -1592,17 +1622,31 @@
   if(!sbOn)return;
   fetch(`${SB_URL}/app_data`,{method:'POST',headers:{...SB_H,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify([{key,value}])}).catch(()=>{sbOn=false;});
  }
+ function cleanFileName(name){
+  return String(name||'upload').normalize('NFKC').replace(/[^\w.\-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'upload';
+ }
+async function uploadToSupabase(file,folder){
+  if(!file)throw new Error('ファイルが選択されていません');
+  if(!file.type.startsWith('image/'))throw new Error('画像ファイルを選択してください');
+  const path=`${folder||'orders'}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${cleanFileName(file.name)}`;
+  const r=await fetch(`${SB_BASE}/storage/v1/object/${SB_UPLOAD_BUCKET}/${path}`,{
+   method:'POST',
+   headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':file.type,'x-upsert':'false'},
+   body:file
+  });
+  if(!r.ok){
+   const msg=await r.text().catch(()=>'');
+   throw new Error(`Supabase Storageに保存できませんでした。バケット「${SB_UPLOAD_BUCKET}」とアップロード権限を確認してください。${msg?' '+msg:''}`);
+  }
+  return `${SB_BASE}/storage/v1/object/public/${SB_UPLOAD_BUCKET}/${path}`;
+ }
+ function editorUploadFolder(label){
+  return `editor/${cleanFileName(label||'image')}`;
+ }
 
  // ─── Storage: IndexedDB（オフラインキャッシュ）───
- const DB_NAME='miraco_db',STORE='kv';let _db=null;
- function idbOpen(){return new Promise((res,rej)=>{try{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
- function idbGet(k){return new Promise(res=>{if(!_db)return res(null);try{const t=_db.transaction(STORE,'readonly').objectStore(STORE).get(k);t.onsuccess=()=>res(t.result??null);t.onerror=()=>res(null);}catch(e){res(null);}});}
- function idbSet(k,v){return new Promise(res=>{if(!_db)return res(false);try{const t=_db.transaction(STORE,'readwrite').objectStore(STORE).put(v,k);t.onsuccess=()=>res(true);t.onerror=()=>res(false);}catch(e){res(false);}});}
  function save(){
-  // ローカルキャッシュ（オフライン用）
-  if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
-  else{try{localStorage.setItem('miraco_menus',JSON.stringify(menus));localStorage.setItem('miraco_orders',JSON.stringify(orders));localStorage.setItem('miraco_site',JSON.stringify(siteContent));}catch(e){}}
-  // クラウド（Supabase）
+  // 業務データはSupabaseに集約する。ブラウザや担当者が変わっても同じデータを見るため、ローカル永続保存は使わない。
   sbSet('menus',menus);sbSet('orders',orders);sbSet('site',siteContent);
  }
  function yenNum(s){const m=(s||'').match(/[0-9,]+/);return m?'¥'+m[0]:s}
@@ -1814,26 +1858,6 @@
  // ─── Block Editor UI ───
  const BLOCK_LABELS={heading:'見出し',text:'文章',checklist:'チェックリスト',image:'画像',imagegrid:'画像グリッド',steps:'制作の流れ',faq:'よくある質問',review:'お客様の声',menus:'メニュー一覧',reviews:'お客様の声',worries:'困ったセクション'};
  let blockCtx={list:[],el:'#editBlocks'};
-
- function readFile(file,cb){
-  const r=new FileReader();
-  r.onload=e=>{
-   const img=new Image();
-   img.onload=()=>{
-    const MAX=800;
-    let w=img.width,h=img.height;
-    if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
-    else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
-    const c=document.createElement('canvas');
-    c.width=w;c.height=h;
-    c.getContext('2d').drawImage(img,0,0,w,h);
-    cb(c.toDataURL('image/jpeg',0.7));
-   };
-   img.src=e.target.result;
-  };
-  r.readAsDataURL(file);
- }
-
  function renderBlockEditor(list,containerId){
   blockCtx={list,el:containerId};
   const PH={review:'1行目：お名前（例：M.K様）　2行目以降：コメント',steps:'1行に1ステップずつ（例：ヒアリング→デザイン提案→修正→納品）',faq:'質問と回答を改行、項目間は空行で区切る'};
@@ -1872,17 +1896,23 @@
   });
   $$(`${containerId} [data-bsize]`).forEach(el=>el.addEventListener('change',e=>{list[+e.target.dataset.bsize].size=e.target.value;}));
   $$(`${containerId} [data-bimgfile]`).forEach(inp=>{
-   inp.addEventListener('change',e=>{
+   inp.addEventListener('change',async e=>{
     const f=e.target.files[0];if(!f)return;
-    readFile(f,url=>{list[+e.target.dataset.bimgfile].content=url;renderBlockEditor(list,containerId);});
+    try{
+     const idx=+e.target.dataset.bimgfile;
+     const url=await uploadToSupabase(f,editorUploadFolder(`${containerId}-block-${idx}`));
+     list[idx].content=url;renderBlockEditor(list,containerId);toast('画像を保存しました');
+    }catch(err){toast(err.message||'画像を保存できませんでした');}
    });
   });
   $$(`${containerId} [data-igfile]`).forEach(inp=>{
-   inp.addEventListener('change',e=>{
+   inp.addEventListener('change',async e=>{
     const idx=+e.target.dataset.igfile;const files=Array.from(e.target.files);if(!files.length)return;
     if(!Array.isArray(list[idx].content))list[idx].content=[];
-    let done=0;
-    files.forEach(f=>readFile(f,url=>{list[idx].content.push(url);done++;if(done===files.length)renderBlockEditor(list,containerId);}));
+    try{
+     const urls=await Promise.all(files.map(f=>uploadToSupabase(f,editorUploadFolder(`${containerId}-gallery-${idx}`))));
+     list[idx].content.push(...urls);renderBlockEditor(list,containerId);toast('画像を保存しました');
+    }catch(err){toast(err.message||'画像を保存できませんでした');}
    });
   });
  }
@@ -1917,7 +1947,7 @@
  }
 
  // ─── Form Field Editor (admin) ───
- const FIELD_TYPE_LABELS={text:'テキスト',textarea:'複数行テキスト',radio:'ラジオボタン',checkbox:'チェックボックス'};
+ const FIELD_TYPE_LABELS={text:'テキスト',textarea:'複数行テキスト',image:'画像アップロード',radio:'ラジオボタン',checkbox:'チェックボックス'};
  function renderFormFieldsUI(){
   $('#editFields').innerHTML=editingFormFields.map((f,i)=>{
    const hasOpts=f.type==='radio'||f.type==='checkbox';
@@ -1935,7 +1965,7 @@
     </div>`).join('')}
     <button class="field-opt-add" data-foptadd="${i}">＋ 選択肢を追加</button>
    </div>`:'';
-   const phHTML=!hasOpts?`<input type="text" class="field-ph-input" data-fph="${i}" value="${esc(f.placeholder||'')}" placeholder="プレースホルダー（ヒント文）">`:'';
+   const phHTML=!hasOpts?`<input type="text" class="field-ph-input" data-fph="${i}" value="${esc(f.placeholder||'')}" placeholder="${f.type==='image'?'案内文（例：ロゴ画像を添付してください）':'プレースホルダー（ヒント文）'}">`:'';
    return `<div class="field-item">
     <div class="field-item-head">
      <span class="block-type-badge">${FIELD_TYPE_LABELS[f.type]||f.type}</span>
@@ -1963,13 +1993,15 @@
    opts[j].price=priceNum(e.target.value)||'';
    editingFormFields[i].options=opts;
   }));
-  $$('#editFields [data-foptimg]').forEach(inp=>inp.addEventListener('change',e=>{
+  $$('#editFields [data-foptimg]').forEach(inp=>inp.addEventListener('change',async e=>{
    const[i,j]=e.target.dataset.foptimg.split('-').map(Number);
    const f=e.target.files[0];if(!f)return;
-   readFile(f,url=>{
+   try{
+    const url=await uploadToSupabase(f,`menu-options/${cleanFileName(editingMenuId||'new')}`);
     const opts=normalizeOptions(editingFormFields[i].options);
     opts[j].image=url;editingFormFields[i].options=opts;renderFormFieldsUI();
-   });
+    toast('画像を保存しました');
+   }catch(err){toast(err.message||'画像を保存できませんでした');}
   }));
  }
 
@@ -1984,6 +2016,7 @@
     const req=f.required?'<span style="color:#c05050;margin-left:2px">*</span>':'';
     if(f.type==='text') return `<div class="form-group"><label>${esc(f.label)}${req}</label><input data-cfi="${i}" placeholder="${esc(f.placeholder||'')}"></div>`;
     if(f.type==='textarea') return `<div class="form-group"><label>${esc(f.label)}${req}</label><textarea data-cfi="${i}" placeholder="${esc(f.placeholder||'')}"></textarea></div>`;
+    if(f.type==='image') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="file-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}<br><span style="font-size:10px">PNG / JPG / WEBP</span></div></div><input type="file" accept="image/*" data-cf-file="${i}" style="display:none"></div>`;
     if(f.type==='radio') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="radio-group">${(f.options||[]).map(o=>`<label class="radio-option"><input type="radio" name="cf_r${i}" value="${esc(o)}" data-cfi="${i}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
     if(f.type==='checkbox') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="radio-group">${(f.options||[]).map(o=>`<label class="radio-option"><input type="checkbox" value="${esc(o)}" data-cfic="${i}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
     return '';
@@ -1996,6 +2029,7 @@
   const ans={};
   m.formFields.forEach((f,i)=>{
    if(f.type==='text'||f.type==='textarea'){const el=document.querySelector(`[data-cfi="${i}"]`);ans[f.label]=el?el.value:'';}
+   else if(f.type==='image'){ans[f.label]=applyDraft.customFields?.[f.label]||'';}
    else if(f.type==='radio'){const c=document.querySelector(`input[name="cf_r${i}"]:checked`);ans[f.label]=c?c.value:'';}
    else if(f.type==='checkbox'){ans[f.label]=Array.from(document.querySelectorAll(`[data-cfic="${i}"]:checked`)).map(c=>c.value).join('、')||'';}
   });
@@ -2140,6 +2174,15 @@
     const saved=applyDraft.customFields?.[f.label]||'';
     if(f.type==='text') return `<div class="form-group"><label>${esc(f.label)} ${req}</label><input data-cfi="${i}" value="${esc(saved)}" placeholder="${esc(f.placeholder||'')}"></div>`;
     if(f.type==='textarea') return `<div class="form-group"><label>${esc(f.label)} ${req}</label><textarea data-cfi="${i}" placeholder="${esc(f.placeholder||'')}">${esc(saved)}</textarea></div>`;
+    if(f.type==='image'){
+     const info=saved&&typeof saved==='object'?uploadPreviewHTML(saved):'';
+     return `<div class="form-group"><label>${esc(f.label)} ${req}</label>
+      <div class="file-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}<br><span style="font-size:10px">PNG / JPG / WEBP</span></div></div>
+      <input type="file" accept="image/*" data-cf-file="${i}" style="display:none">
+      <div data-cf-file-preview="${i}">${info}</div>
+      <div class="form-hint">画像はSupabase Storageに保存されます。印刷用ロゴなど大きい原寸データも受け取れます。</div>
+     </div>`;
+    }
     if(f.type==='radio'){
      const opts=normalizeOptions(f.options);const hasImg=opts.some(o=>o.image);
      return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="${hasImg?'radio-grid':'radio-group'}">${opts.map(o=>{const chk=saved===o.label?'checked':'';return o.image?`<label class="radio-option has-img"><img class="opt-img" src="${esc(o.image)}" alt="${esc(o.label)}"><div class="opt-label"><input type="radio" name="cfall_r${i}" value="${esc(o.label)}" ${chk}><span class="radio-dot"></span><span>${esc(o.label)}</span>${pTag(o)}</div></label>`:`<label class="radio-option"><input type="radio" name="cfall_r${i}" value="${esc(o.label)}" ${chk}><span class="radio-dot"></span><span>${esc(o.label)}</span>${pTag(o)}</label>`;}).join('')}</div></div>`;
@@ -2153,8 +2196,9 @@
    $('#applyStepContent').innerHTML=`
     <p class="apply-step-title">${esc(m?m.title:'')}について<br>教えてください</p>
     <div class="form-body">${fields.map((f,i)=>fieldHtml(f,i)).join('')}</div>
-    <div id="quoteBar"></div>`;
+   <div id="quoteBar"></div>`;
    setTimeout(updateQuoteBar,10);
+   setTimeout(bindCustomFileInputs,10);
    $('#applyStepContent').onchange=updateQuoteBar;
   } else if(step.type==='misc'){
    const mm=menus.find(x=>x.title===applyDraft.menu)||selected;
@@ -2190,13 +2234,50 @@
   window.scrollTo({top:0,behavior:'instant'});
  }
 
+ function bindCustomFileInputs(){
+  const m=menus.find(x=>x.title===applyDraft.menu)||selected;
+  (m&&m.formFields||[]).forEach((f,i)=>{
+   if(f.type!=='image')return;
+   const area=document.querySelector(`[data-cf-file-area="${i}"]`);
+   const input=document.querySelector(`[data-cf-file="${i}"]`);
+   const prev=document.querySelector(`[data-cf-file-preview="${i}"]`);
+   if(!area||!input)return;
+   area.addEventListener('click',()=>input.click());
+   input.addEventListener('change',async e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(!file.type.startsWith('image/')){toast('画像ファイルを選択してください');return;}
+    if(prev)prev.innerHTML=`<div class="form-hint">Supabaseにアップロード中です...</div>`;
+    try{
+     const url=await uploadToSupabase(file,`orders/${cleanFileName(applyDraft.email||'guest')}`);
+     const value={
+      name:file.name,
+      type:file.type,
+      size:file.size,
+      url,
+      storage:'supabase',
+      bucket:SB_UPLOAD_BUCKET,
+      originalNote:file.size>10*1024*1024?'大きいファイルです。原寸データを保持する場合はSupabase Storageまたは共有リンクで管理してください。':''
+     };
+     if(!applyDraft.customFields)applyDraft.customFields={};
+     applyDraft.customFields[f.label]=value;
+     if(prev)prev.innerHTML=uploadPreviewHTML(value);
+     toast('画像をSupabaseに保存しました');
+    }catch(err){
+     if(prev)prev.innerHTML=`<div class="form-error">${esc(err.message||'アップロードに失敗しました')}</div>`;
+     toast(err.message||'アップロードに失敗しました');
+    }
+   });
+  });
+ }
+
  function saveApplyStep(){
   const step=applySteps[applyStep];
   if(!applyDraft.customFields)applyDraft.customFields={};
   if(step.type==='custom'){
    const m=menus.find(x=>x.title===applyDraft.menu)||selected;
    (m&&m.formFields||[]).forEach((f,i)=>{
-    if(f.type==='text'||f.type==='textarea'){const el=document.querySelector(`[data-cfi="${i}"]`);applyDraft.customFields[f.label]=el?el.value:'';}
+   if(f.type==='text'||f.type==='textarea'){const el=document.querySelector(`[data-cfi="${i}"]`);applyDraft.customFields[f.label]=el?el.value:'';}
+    else if(f.type==='image'){applyDraft.customFields[f.label]=applyDraft.customFields[f.label]||'';}
     else if(f.type==='radio'){const c=document.querySelector(`input[name="cfall_r${i}"]:checked`);applyDraft.customFields[f.label]=c?c.value:'';}
     else if(f.type==='checkbox'){applyDraft.customFields[f.label]=Array.from(document.querySelectorAll(`[data-cfic="${i}"]:checked`)).map(c=>c.value).join('、')||'';}
    });
@@ -2223,6 +2304,7 @@
     if(!f.required)continue;
     let v='';
     if(f.type==='text'||f.type==='textarea'){const el=document.querySelector(`[data-cfi="${i}"]`);v=el?el.value.trim():'';}
+    else if(f.type==='image'){const img=applyDraft.customFields?.[f.label];v=img&&typeof img==='object'&&img.url?'y':'';}
     else if(f.type==='radio'){const c=document.querySelector(`input[name="cfall_r${i}"]:checked`);v=c?c.value:'';}
     else if(f.type==='checkbox')v=document.querySelectorAll(`[data-cfic="${i}"]:checked`).length>0?'y':'';
     if(!v){toast(`「${f.label}」を入力してください`);return false;}
@@ -2252,7 +2334,7 @@
   const q=calcQuoteFrom(applyDraft);
   applyDraft.quote={base:q.base,addons:q.addons,total:q.total,hasBase:q.hasBase};
   draft={...applyDraft};
-  const customRows=Object.entries(draft.customFields||{}).filter(([k,v])=>v).map(([k,v])=>`<div class="confirm-row"><span class="confirm-label" style="font-size:10px;width:88px">${esc(k)}</span><span class="confirm-val">${esc(v)}</span></div>`).join('');
+  const customRows=customFieldRowsHTML(draft.customFields||{});
   const quoteHTML=(q.hasBase||q.addons.length)?`<div style="margin-top:14px">${quoteRowsHTML(q)}</div>`:'';
   $('#confirmBox').innerHTML=`
    <div class="confirm-row"><span class="confirm-label">お名前</span><span class="confirm-val">${esc(draft.name)}</span></div>
@@ -2315,7 +2397,7 @@
   const o=orders.find(x=>x.no===no);if(!o)return;
   $('#myOrderNo').textContent='依頼 #'+o.no;
   const rows=[['メニュー',o.menu],['ステータス',o.status]];
-  const customRows=Object.entries(o.customFields||{}).filter(([k,v])=>v).map(([k,v])=>['　'+k,v]);
+  const customRows=customFieldRowsArray(o.customFields);
   const rows2=[['お名前',o.name],['メール',o.email]];
   if(o.contact==='line')rows2.push(['LINE',o.line||'未入力']);
   rows2.push(['ご連絡',o.msg||'未入力'],['希望納期',o.due||'未定'],['お支払い方法',o.pay||'—'],['受付日',o.date]);
@@ -2346,7 +2428,7 @@
      <button class="btn primary" id="submitReviewBtn" data-review="${o.no}" style="border-radius:999px;margin-top:10px">レビューを投稿する</button></div>`;
    }
   }
-  $('#myOrderBody').innerHTML=progressBar(o.status)+rowsHTML+quoteHTML+delivHTML+reviewHTML;
+  $('#myOrderBody').innerHTML=progressBar(o.status)+rowsHTML+quoteHTML+customUploadsHTML(o.customFields)+delivHTML+reviewHTML;
   // レビュー★操作
   if(o.status==='納品済み'&&!o.review){
    let rating=5;const paint=()=>$$('#starInput .star').forEach(s=>s.classList.toggle('on',+s.dataset.star<=rating));paint();
@@ -2399,7 +2481,7 @@
    ['お名前',o.name],['メール',o.email],['連絡方法',contactLabel],['LINE',o.line||'—'],
    ['メニュー',o.menu]
   ];
-  const customRows=Object.entries(o.customFields||{}).filter(([k,v])=>v).map(([k,v])=>['　'+k,v]);
+  const customRows=customFieldRowsArray(o.customFields);
   const rows2=[
    ['ご連絡',o.msg||'未入力'],['希望納期',o.due||'未定'],
    ['お支払い',o.pay],['受付日',o.date],['ステータス',o.status]
@@ -2446,7 +2528,7 @@
   const adminExtra=`<div class="om-thread"><div class="om-thread-label">担当者・管理メモ（お客様には表示されません）</div>
    <input id="omAssignee" placeholder="担当者・外注先（例：山田さん / 外注A）" value="${esc(o.assignee||'')}" style="width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font-size:15px;font-family:inherit;outline:none;margin-bottom:8px;color:var(--ink)">
    <textarea class="admin-note" id="omNote" placeholder="社内メモ（進行状況・注意点など）">${esc(o.adminNote||'')}</textarea></div>`;
-  $('#orderModalBody').innerHTML=rowsHTML+quoteHTML+threadHTML+delivUp+adminExtra;
+  $('#orderModalBody').innerHTML=rowsHTML+quoteHTML+customUploadsHTML(o.customFields)+threadHTML+delivUp+adminExtra;
   $('#orderModalStatus').innerHTML=STATUS_LIST.map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('');
   // 担当者・メモの保存（入力で即保存）
   const asg=$('#omAssignee');if(asg)asg.addEventListener('input',e=>{o.assignee=e.target.value;save();renderOrders();});
@@ -2463,13 +2545,17 @@
   };
   // 納品アップロード（自動連動：制作中→確認中）
   const duf=$('#delivUpFile');
-  if(duf)duf.addEventListener('change',e=>{
+  if(duf)duf.addEventListener('change',async e=>{
    const files=Array.from(e.target.files);if(!files.length)return;
-   if(!o.deliveryFiles)o.deliveryFiles=[];let done=0;
-   files.forEach(f=>readFile(f,url=>{o.deliveryFiles.push({name:f.name,url});done++;if(done===files.length){
+   if(!o.deliveryFiles)o.deliveryFiles=[];
+   try{
+    for(const f of files){
+     const url=await uploadToSupabase(f,`delivery/${o.no}`);
+     o.deliveryFiles.push({name:f.name,size:f.size,type:f.type,url,storage:'supabase',bucket:SB_UPLOAD_BUCKET});
+    }
     if(o.status==='制作中'){o.status='確認中';toast('納品データを追加（確認中に更新）');}else toast('納品データを追加しました');
     save();openOrderModal(o.no);renderOrders();
-   }}));
+   }catch(err){toast(err.message||'アップロードに失敗しました');}
    e.target.value='';
   });
   // 返信送信（テキスト・画像）
@@ -2485,7 +2571,12 @@
    replyBtn.onclick=send;
    $('#omReplyInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();send();}});
    const rf=$('#omReplyFile');
-   if(rf)rf.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;readFile(f,url=>pushAdmin({image:url}));e.target.value='';});
+   if(rf)rf.addEventListener('change',async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{const url=await uploadToSupabase(f,`messages/${o.no}/admin`);pushAdmin({image:url,imageName:f.name,imageSize:f.size,storage:'supabase'});}
+    catch(err){toast(err.message||'アップロードに失敗しました');}
+    e.target.value='';
+   });
    // 定型文チップ → 入力欄へ挿入
    $$('#orderModalBody [data-canned]').forEach(ch=>ch.onclick=()=>{const inp=$('#omReplyInput');inp.value=CANNED[+ch.dataset.canned];inp.focus();});
   }
@@ -2663,8 +2754,27 @@
  }
 
  // ─── Click delegation ───
- document.addEventListener('click',e=>{
+ document.addEventListener('click',async e=>{
   if(e.target.classList.contains('status-select'))return;
+  const upDl=e.target.closest('[data-upload-download]');
+  if(upDl){
+   e.preventDefault();e.stopPropagation();
+   const url=upDl.dataset.uploadDownload;
+   const name=upDl.dataset.uploadName||'miraco-upload.jpg';
+   try{
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('download failed');
+    const blob=await r.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('ダウンロードを開始しました');
+   }catch(err){
+    const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.click();
+    toast('画像を開きます。保存してください');
+   }
+   return;
+  }
   // ライトボックス
   const lb=e.target.closest('[data-lightbox]');
   if(lb){$('#lightboxImg').src=lb.dataset.lightbox;$('#lightbox').classList.add('on');return;}
@@ -2745,7 +2855,17 @@
   const fmv=e.target.closest('[data-fmv]');
   if(fmv){const i=+fmv.dataset.fidx,d=+fmv.dataset.fmv,j=i+d;if(j>=0&&j<editingFormFields.length){[editingFormFields[i],editingFormFields[j]]=[editingFormFields[j],editingFormFields[i]];}renderFormFieldsUI();return;}
   const fadd=e.target.closest('[data-field-add]');
-  if(fadd){const t=fadd.dataset.fieldAdd;editingFormFields.push({type:t,label:'',placeholder:'',options:t==='radio'||t==='checkbox'?[{label:'選択肢1',image:''},{label:'選択肢2',image:''}]:[],required:false});renderFormFieldsUI();setTimeout(()=>{const ls=$$('#editFields .field-label-input');ls[ls.length-1]?.focus();},50);return;}
+  if(fadd){
+   const t=fadd.dataset.fieldAdd;
+   editingFormFields.push({
+    type:t,
+    label:t==='image'?'ロゴ・参考画像':'',
+    placeholder:t==='image'?'ロゴ画像や参考資料を添付してください':'',
+    options:t==='radio'||t==='checkbox'?[{label:'選択肢1',image:''},{label:'選択肢2',image:''}]:[],
+    required:false
+   });
+   renderFormFieldsUI();setTimeout(()=>{const ls=$$('#editFields .field-label-input');ls[ls.length-1]?.focus();},50);return;
+  }
   const foptdel=e.target.closest('[data-foptdel]');
   if(foptdel){const[i,j]=foptdel.dataset.foptdel.split('-').map(Number);const opts=normalizeOptions(editingFormFields[i].options);opts.splice(j,1);editingFormFields[i].options=opts;renderFormFieldsUI();return;}
   const foptadd=e.target.closest('[data-foptadd]');
@@ -2834,7 +2954,7 @@
   orders.push({...draft,contact,no,status:'ヒアリング中',date:new Date().toISOString().slice(0,10),messages:[]});
   try{save();}catch(e){toast('保存エラー: '+e.message);return;}
   // 受注したらそのままマイページにログイン状態に
-  if(draft.email){currentUser=draft.email;localStorage.setItem('miraco_user',currentUser);}
+  if(draft.email){currentUser=draft.email;}
   $('#receiptNo').textContent='#'+no;
   // 連絡方法に応じて完了画面を出し分け
   if(contact==='line'){
@@ -2858,7 +2978,7 @@
  function doLogin(email){
   email=(email||'').trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('正しいメールアドレスを入力してください');return false;}
-  currentUser=email;localStorage.setItem('miraco_user',currentUser);
+  currentUser=email;
   renderOrders();
   if(!orders.some(o=>o.email===email))toast('このメールのご注文は見つかりませんでした');
   return true;
@@ -2872,9 +2992,9 @@
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(()=>toast('ログインリンクをコピーしました（本番ではメール送信）')).catch(()=>toast('リンク: '+url));}
   else toast('ログインリンク: '+url);
  };
- $('#logoutBtn').onclick=()=>{currentUser='';localStorage.removeItem('miraco_user');renderOrders();toast('ログアウトしました');};
+ $('#logoutBtn').onclick=()=>{currentUser='';renderOrders();toast('ログアウトしました');};
  // 起動時：URLの ?u=email でログイン（マジックリンク）
- (function(){try{const p=new URLSearchParams(location.search).get('u');if(p){currentUser=p;localStorage.setItem('miraco_user',p);}}catch(e){}})();
+ (function(){try{const p=new URLSearchParams(location.search).get('u');if(p){currentUser=p;}}catch(e){}})();
 
  // ─── Chat（依頼ごとのスレッド）───
  let chatOrderNo=null;
@@ -2937,9 +3057,14 @@
   pushUserMsg({text:v});$('#chatInput').value='';
  };
  $('#chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#sendChat').click();}});
- $('#chatFile').addEventListener('change',e=>{
+ $('#chatFile').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  readFile(f,url=>pushUserMsg({image:url}));
+  const o=orders.find(x=>x.no===chatOrderNo);
+  if(!o){toast('対象の依頼がありません');e.target.value='';return;}
+  try{
+   const url=await uploadToSupabase(f,`messages/${o.no}/user`);
+   pushUserMsg({image:url,imageName:f.name,imageSize:f.size,storage:'supabase'});
+  }catch(err){toast(err.message||'アップロードに失敗しました');}
   e.target.value='';
  });
  // ─── お支払い（お客様）───
@@ -3077,9 +3202,12 @@
  $('#shareNative').onclick=()=>{const u=shareUrl();if(navigator.share){navigator.share({title:(siteContent.brandName||'MIRACO'),text:'ここから相談・ご注文いただけます',url:u}).catch(()=>{});}else{$('#shareCopy').click();}};
 
  // ─── Menu image upload ───
- $('#eImgFile').addEventListener('change',e=>{
+ $('#eImgFile').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  readFile(f,url=>{showImgPreview(url);$('#eImgUrl').value='';});
+  try{
+   const url=await uploadToSupabase(f,`menus/${cleanFileName(editingMenuId||$('#eName').value||'menu')}`);
+   showImgPreview(url);$('#eImgUrl').value='';toast('画像を保存しました');
+  }catch(err){toast(err.message||'画像を保存できませんでした');}
  });
  $('#eImgUrl').addEventListener('input',e=>{
   const v=e.target.value.trim();
@@ -3112,15 +3240,15 @@
   nav('adminHome');
  };
  $('#homeEditBack').onclick=()=>nav('admin');
- $('#hImgFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;readFile(f,url=>{$('#hImgPreview').src=url;$('#hImgPreviewWrap').style.display='';});});
+ $('#hImgFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const url=await uploadToSupabase(f,'site/home');$('#hImgPreview').src=url;$('#hImgPreviewWrap').style.display='';toast('画像を保存しました');}catch(err){toast(err.message||'画像を保存できませんでした');}});
  $('#hImgRemove').onclick=()=>{$('#hImgPreview').src='';$('#hImgPreviewWrap').style.display='none';};
- $('#hLogoFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;readFile(f,url=>{$('#hLogoPreview').src=url;$('#hLogoPreviewWrap').style.display='';});});
+ $('#hLogoFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const url=await uploadToSupabase(f,'site/logo');$('#hLogoPreview').src=url;$('#hLogoPreviewWrap').style.display='';toast('画像を保存しました');}catch(err){toast(err.message||'画像を保存できませんでした');}});
  $('#hLogoRemove').onclick=()=>{$('#hLogoPreview').src='';$('#hLogoPreviewWrap').style.display='none';};
  function applyHomeEdits(){
   siteContent.brandName=$('#hBrandName').value||'MIRACO';
   siteContent.brandSub=$('#hBrandSub').value||'';
   const logo=$('#hLogoPreview').getAttribute('src')||'';
-  siteContent.logoImage=logo.startsWith('data:')?logo:'';
+  siteContent.logoImage=logo;
   siteContent.homeTitle=$('#hTitle').value;
   siteContent.homeEn=$('#hEn').value;
   siteContent.homeLead=$('#hLead').value;
@@ -3133,7 +3261,7 @@
   siteContent.homeWorries=$('#hWorries').value.split('\n').map(s=>s.trim()).filter(Boolean);
   siteContent.homeBlocks=JSON.parse(JSON.stringify(editingHomeBlocks));
   const src=$('#hImgPreview').getAttribute('src')||'';
-  siteContent.homeImage=src.startsWith('data:')?src:'';
+  siteContent.homeImage=src;
  }
  $('#saveHomeBtn').onclick=()=>{
   applyHomeEdits();
@@ -3210,6 +3338,7 @@
    const req=f.required?'<span style="color:#c05050">*</span>':'';
    if(f.type==='text')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><input placeholder="${esc(f.placeholder||'')}"></div>`;
    if(f.type==='textarea')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><textarea placeholder="${esc(f.placeholder||'')}"></textarea></div>`;
+   if(f.type==='image')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="file-upload"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}<br><span style="font-size:10px">PNG / JPG / WEBP</span></div></div><div class="form-hint">画像はSupabase Storageに保存されます。</div></div>`;
    if(f.type==='radio'||f.type==='checkbox'){
     const opts=normalizeOptions(f.options);const hasImg=opts.some(o=>o.image);const inp=f.type==='radio'?'radio':'checkbox';const dot=f.type==='checkbox'?'is-check':'';
     return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="${hasImg?'radio-grid':'radio-group'}">${opts.map(o=>o.image?`<label class="radio-option has-img"><img class="opt-img" src="${esc(o.image)}"><div class="opt-label"><input type="${inp}"><span class="radio-dot ${dot}"></span><span>${esc(o.label)}</span>${pTag(o)}</div></label>`:`<label class="radio-option"><input type="${inp}"><span class="radio-dot ${dot}"></span><span>${esc(o.label)}</span>${pTag(o)}</label>`).join('')}</div></div>`;
@@ -3252,33 +3381,23 @@
   save();openEdit(newId);
  };
 
- $('#resetDemo').onclick=()=>{
-  if(!confirm('デモデータをリセットしますか？'))return;
-  try{localStorage.removeItem('miraco_menus');localStorage.removeItem('miraco_orders');localStorage.removeItem('miraco_site');}catch(e){}
+$('#resetDemo').onclick=()=>{
+ if(!confirm('デモデータをリセットしますか？'))return;
   menus=defaults.slice();orders=[];siteContent=JSON.parse(JSON.stringify(siteDefaults));selected=menus[0];save();renderMenus();renderOrders();renderSite();toast('リセットしました');
- };
+};
 
- // ─── 起動：Supabase優先→なければIndexedDB/localStorage ───
- async function boot(){
-  try{_db=await idbOpen();}catch(e){_db=null;}
+// ─── 起動：Supabaseから読み込み ───
+async function boot(){
   let m,o,s;
   // クラウド優先
   const cloud=await sbGetAll();
   if(cloud){m=cloud.menus;o=cloud.orders;s=cloud.site;}
-  // フォールバック：IDB→localStorage
-  if(m==null)m=await idbGet('menus');
-  if(o==null)o=await idbGet('orders');
-  if(s==null)s=await idbGet('site');
-  if(m==null){try{const ls=localStorage.getItem('miraco_menus');if(ls)m=JSON.parse(ls);}catch(e){}}
-  if(o==null){try{const ls=localStorage.getItem('miraco_orders');if(ls)o=JSON.parse(ls);}catch(e){}}
-  if(s==null){try{const ls=localStorage.getItem('miraco_site');if(ls)s=JSON.parse(ls);}catch(e){}}
   menus=(Array.isArray(m)&&m.length)?m:defaults.slice();
   orders=Array.isArray(o)?o:[];
   siteContent=Object.assign({},siteDefaults,s||{});
   selected=menus[0];
-  // 初回（クラウド空）ならデフォルトをクラウドへ。IDBにもキャッシュ
+  // 初回（クラウド空）ならデフォルトをクラウドへ。
   if(!cloud||cloud.menus==null){sbSet('menus',menus);sbSet('orders',orders);sbSet('site',siteContent);}
-  if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
   renderMenus();renderOrders();renderSite();
   startSync();
  }
@@ -3296,7 +3415,6 @@
    if(cloud.menus&&J(cloud.menus)!==J(menus)){menus=cloud.menus;changed=true;}
    if(cloud.site&&J(cloud.site)!==J(siteContent)){siteContent=Object.assign({},siteDefaults,cloud.site);changed=true;}
    if(!changed)return;
-   if(_db){idbSet('menus',menus);idbSet('orders',orders);idbSet('site',siteContent);}
    const active=document.querySelector('.screen.active')?.id;
    if(editScreens.includes(active))return; // 編集中の画面は再描画しない（データだけ更新）
    renderMenus();renderOrders();renderSite();
