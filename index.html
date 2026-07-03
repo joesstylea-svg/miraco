@@ -1195,6 +1195,7 @@
       画像をアップロード
       <input type="file" id="eImgFile" accept="image/*" style="display:none">
     </label>
+    <div class="form-hint">推奨サイズ：1200×900px（4:3）。メニュー一覧と詳細ページのメイン画像に使います。</div>
     <div style="display:flex;align-items:center;gap:8px;margin:10px 0">
       <div style="height:1px;flex:1;background:var(--line)"></div>
       <span style="font-size:11px;color:var(--muted)">または</span>
@@ -1874,11 +1875,12 @@ async function uploadToSupabase(file,folder){
          ファイルを選択
          <input type="file" accept="image/*" data-bimgfile="${i}" style="display:none">
         </label>
-        <input class="block-content" data-type="image" data-bidx="${i}" style="min-height:auto;resize:none;border:1.5px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12px" placeholder="または画像URLを貼り付け" value="${esc(b.content||'')}">
+        <div class="form-hint">推奨サイズ：1200×675px（16:9）。本文の横長画像としてきれいに表示されます。</div>
+         <input class="block-content" data-type="image" data-bidx="${i}" style="min-height:auto;resize:none;border:1.5px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12px" placeholder="または画像URLを貼り付け" value="${esc(b.content||'')}">
        </div>`;
    } else if(isGrid){
     const imgs=Array.isArray(b.content)?b.content:[];
-    inputArea=`<div style="padding:10px 12px"><div class="ig-edit-grid">${imgs.map((src,k)=>`<div class="ig-edit-item"><img src="${esc(src)}" alt=""><button class="ig-del" data-igdel="${i}-${k}">✕</button></div>`).join('')}<label class="ig-add">＋<input type="file" accept="image/*" multiple data-igfile="${i}" style="display:none"></label></div></div>`;
+    inputArea=`<div style="padding:10px 12px"><div class="form-hint" style="margin:0 0 8px">推奨サイズ：1000×1000px（正方形）。2〜4枚を同じ比率で揃えると整って見えます。</div><div class="ig-edit-grid">${imgs.map((src,k)=>`<div class="ig-edit-item"><img src="${esc(src)}" alt=""><button class="ig-del" data-igdel="${i}-${k}">✕</button></div>`).join('')}<label class="ig-add">＋<input type="file" accept="image/*" multiple data-igfile="${i}" style="display:none"></label></div></div>`;
    } else if(b.type==='menus'||b.type==='reviews'){
     inputArea=`<input class="block-content" data-type="${b.type}" data-bidx="${i}" style="width:100%;border:0;border-bottom:1px solid var(--line);padding:11px 14px;font-size:14px;font-weight:600;outline:none;font-family:inherit;color:var(--ink)" placeholder="セクション見出し" value="${esc(b.content||'')}">`;
    } else if(b.type==='worries'){
