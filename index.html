@@ -2881,8 +2881,8 @@ async function uploadToSupabase(file,folder){
    const t=fadd.dataset.fieldAdd;
    editingFormFields.push({
     type:t,
-    label:t==='image'?'ロゴ・参考画像':'',
-    placeholder:t==='image'?'ロゴ画像や参考資料を添付してください':'',
+    label:t==='image'?'画像アップロード':'',
+    placeholder:t==='image'?'ロゴ・参考画像などを添付してください':'',
     options:t==='radio'||t==='checkbox'?[{label:'選択肢1',image:''},{label:'選択肢2',image:''}]:[],
     required:false
    });
