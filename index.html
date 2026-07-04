@@ -625,10 +625,18 @@
   .hist-tag.paid{background:#eaf4ee;color:#2f7a52}
   /* 支払い方法エディタ */
   .pay-edit-item{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;margin:0 20px 10px}
+  .pay-edit-item.is-hidden{background:var(--paper)}
   .pay-edit-item input{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;color:var(--ink)}
   .pay-edit-item input:focus{border-color:var(--accent)}
   .pay-edit-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
   .pay-edit-head .num{font-family:var(--num-font);font-size:11px;color:var(--muted);font-weight:700;flex:1}
+  .pay-visible-badge{font-size:10px;font-weight:700;border-radius:999px;padding:3px 9px;background:#eaf4ee;color:#2f7a52;white-space:nowrap}
+  .pay-visible-badge.off{background:#ece9e4;color:var(--muted)}
+  .pay-visible-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--ink);font-weight:600;background:var(--paper);border-radius:10px;padding:9px 10px;margin-top:2px}
+  .pay-visible-toggle input{width:38px;height:22px;margin:0;-webkit-appearance:none;appearance:none;background:var(--line);border:0;border-radius:999px;position:relative;cursor:pointer;transition:background .15s;flex:none}
+  .pay-visible-toggle input:checked{background:var(--accent2-deep)}
+  .pay-visible-toggle input::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .pay-visible-toggle input:checked::after{transform:translateX(16px)}
   /* 日付フィールド：全体タップでピッカー */
   input[type="date"]{cursor:pointer;position:relative}
   input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
@@ -1530,9 +1538,9 @@
   contactMode:'both', // line / app / both（bothならお客様が選択）
   ownerLineUrl:'', // オーナーのLINE友だち追加URL（公式アカウント推奨）
   paymentMethods:[
-   {name:'ユーワードポイント',url:'',info:'',note:'下のボタンからポイント決済ページへ進み、上記の金額でお手続きください。'},
-   {name:'銀行振込',url:'',info:'○○銀行 △△支店 普通 1234567\n名義：ミラコ',note:'下記口座へ、上記の金額をお振込みください。'},
-   {name:'PayPay',url:'',info:'PayPay ID：miraco-pay',note:'PayPayで上記の金額をお送りください。'}
+   {name:'ユーワードポイント',url:'',info:'',note:'下のボタンからポイント決済ページへ進み、上記の金額でお手続きください。',visible:true},
+   {name:'銀行振込',url:'',info:'○○銀行 △△支店 普通 1234567\n名義：ミラコ',note:'下記口座へ、上記の金額をお振込みください。',visible:true},
+   {name:'PayPay',url:'',info:'PayPay ID：miraco-pay',note:'PayPayで上記の金額をお送りください。',visible:true}
   ],
   galleryHeading:'ギャラリー・実績',
   gallerySub:'これまでの制作例とお客様の声をご紹介します。',
@@ -1643,6 +1651,16 @@ async function uploadToSupabase(file,folder){
  }
  function editorUploadFolder(label){
   return `editor/${cleanFileName(label||'image')}`;
+ }
+ function normalizePayMethod(m){
+  m=m||{};
+  return {name:m.name||'',url:m.url||'',info:m.info||'',note:m.note||'',visible:m.visible!==false};
+ }
+ function normalizePayMethods(list){
+  return (Array.isArray(list)?list:[]).map(normalizePayMethod);
+ }
+ function visiblePayMethods(){
+  return normalizePayMethods(siteContent.paymentMethods||[]).filter(m=>m.name&&m.name.trim()&&m.visible!==false);
  }
 
  // ─── Storage: IndexedDB（オフラインキャッシュ）───
@@ -2207,6 +2225,11 @@ async function uploadToSupabase(file,folder){
    const lead=parseLeadDays(mm&&mm.due);
    const minDate=dateAfter(lead);
    const dueHint=lead>0?`最短 <b>${ymdJP(minDate)}</b> 頃から対応可能です（納期目安 ${esc((mm&&mm.due)||'')}）`:'未定の場合は空欄でOKです';
+   const payOptions=visiblePayMethods();
+   const visiblePayNames=payOptions.map(m=>m.name);
+   let currentPay=applyDraft.pay||payOptions[0]?.name||'あとで相談';
+   if(currentPay!=='あとで相談'&&!visiblePayNames.includes(currentPay))currentPay=payOptions[0]?.name||'あとで相談';
+   const payOptionHTML=payOptions.map(m=>`<option${currentPay===m.name?' selected':''}>${esc(m.name)}</option>`).join('')+`<option${currentPay==='あとで相談'?' selected':''}>あとで相談</option>`;
    $('#applyStepContent').innerHTML=`
     <p class="apply-step-title">その他のご連絡</p>
     <div class="form-body">
@@ -2216,14 +2239,11 @@ async function uploadToSupabase(file,folder){
       <input id="fFile" type="file" accept="image/*,.pdf" style="display:none">
      </div>
      <div class="form-group"><label>希望納期</label><input id="fStepDue" type="date" min="${minDate}" value="${esc(applyDraft.due||'')}"><div class="form-hint">${dueHint}</div></div>
-     <div class="form-group"><label>お支払い方法</label>
-      <select id="fStepPay">
-       <option${applyDraft.pay==='ユーワードポイント'||!applyDraft.pay?' selected':''}>ユーワードポイント</option>
-       <option${applyDraft.pay==='PayPay'?' selected':''}>PayPay</option>
-       <option${applyDraft.pay==='銀行振込'?' selected':''}>銀行振込</option>
-       <option${applyDraft.pay==='あとで相談'?' selected':''}>あとで相談</option>
-      </select>
-     </div>
+      <div class="form-group"><label>お支払い方法</label>
+       <select id="fStepPay">
+        ${payOptionHTML}
+       </select>
+      </div>
     </div>`;
    setTimeout(()=>{
     $('#fFileArea')?.addEventListener('click',()=>$('#fFile')?.click());
@@ -3083,16 +3103,16 @@ async function uploadToSupabase(file,folder){
     <div class="px-btn"><button class="btn ghost" data-nav="mypage" style="border-radius:999px">マイページへ戻る</button></div>`;
    return;
   }
-  _payMethods=(siteContent.paymentMethods||[]).filter(m=>m.name&&m.name.trim());
+  _payMethods=visiblePayMethods();
   c.innerHTML=`
    <div class="panel" style="text-align:center;margin-bottom:8px"><div class="panel-label">お支払い金額</div><div class="receipt-no">${yenFmt(q.total)}</div></div>
    <p class="muted px" style="margin-bottom:14px;font-size:12px;line-height:1.8"><b>上記の金額</b>を、ご都合のよい方法でお支払いください。<br>お支払い後、確認がとれ次第ステータスが更新されます。</p>
-   ${_payMethods.length?_payMethods.map((m,i)=>`<div class="pay-method">
+    ${_payMethods.length?_payMethods.map((m,i)=>`<div class="pay-method">
      <div class="pay-method-name">${esc(m.name)}</div>
      ${m.note?`<div class="pay-method-note">${esc(m.note)}</div>`:''}
      ${m.info?`<div class="pay-info"><pre>${esc(m.info)}</pre><button class="pay-info-copy" data-pay-copy="${i}">コピー</button></div>`:''}
      ${m.url?`<button class="btn warm" data-pay-url="${esc(m.url)}" style="border-radius:999px;margin-top:10px">${esc(m.name)}でお支払い →</button>`:''}
-    </div>`).join(''):'<p class="muted px">お支払い方法が設定されていません。下のボタンからご相談ください。</p>'}
+    </div>`).join(''):'<p class="muted px">現在利用できるお支払い方法が設定されていません。内容確認後、オーナーよりご案内いたします。</p>'}
    <p class="muted px" style="margin:6px 0 0;font-size:11px">※ 金額やお支払いについてのご相談は下のボタンからどうぞ。</p>
    <div class="px-btn" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
      ${o.contact==='line'
@@ -3106,31 +3126,41 @@ async function uploadToSupabase(file,folder){
 
  // ─── お支払い方法の編集（管理） ───
  function renderPayEditList(){
-  $('#payEditList').innerHTML=editingPayMethods.map((m,i)=>`
-   <div class="pay-edit-item">
-    <div class="pay-edit-head"><span class="num">方法 ${i+1}</span>
-     <button class="block-mv-btn" data-pmv="-1" data-pidx="${i}">↑</button>
-     <button class="block-mv-btn" data-pmv="1" data-pidx="${i}">↓</button>
-     <button class="block-del-btn" data-pdel="${i}">✕</button>
-    </div>
+  $('#payEditList').innerHTML=editingPayMethods.map((raw,i)=>{
+   const m=normalizePayMethod(raw);
+   editingPayMethods[i]=m;
+   const visible=m.visible!==false;
+   return `
+   <div class="pay-edit-item${visible?'':' is-hidden'}">
+    <div class="pay-edit-head"><span class="num">方法 ${i+1}</span><span class="pay-visible-badge${visible?'':' off'}">${visible?'表示中':'非表示'}</span>
+      <button class="block-mv-btn" data-pmv="-1" data-pidx="${i}">↑</button>
+      <button class="block-mv-btn" data-pmv="1" data-pidx="${i}">↓</button>
+      <button class="block-del-btn" data-pdel="${i}">✕</button>
+     </div>
     <input data-pname="${i}" value="${esc(m.name||'')}" placeholder="方法名（例：PayPay）">
-    <input data-pnote="${i}" value="${esc(m.note||'')}" placeholder="案内文（任意・例：上記金額をお振込みください）">
-    <textarea data-pinfo="${i}" placeholder="お支払い先情報（任意・口座番号やPayPay IDなど。改行OK）" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:15px;font-family:inherit;outline:none;margin-bottom:8px;min-height:54px;resize:vertical;color:var(--ink)">${esc(m.info||'')}</textarea>
-    <input data-purl="${i}" value="${esc(m.url||'')}" placeholder="決済リンクURL（任意・https://…）" style="margin-bottom:0">
-   </div>`).join('')||'<p class="muted px" style="font-size:12px">「＋ お支払い方法を追加」から登録してください。</p>';
+     <input data-pnote="${i}" value="${esc(m.note||'')}" placeholder="案内文（任意・例：上記金額をお振込みください）">
+     <textarea data-pinfo="${i}" placeholder="お支払い先情報（任意・口座番号やPayPay IDなど。改行OK）" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:15px;font-family:inherit;outline:none;margin-bottom:8px;min-height:54px;resize:vertical;color:var(--ink)">${esc(m.info||'')}</textarea>
+     <input data-purl="${i}" value="${esc(m.url||'')}" placeholder="決済リンクURL（任意・https://…）" style="margin-bottom:0">
+     <label class="pay-visible-toggle"><span>お客様に表示する</span><input type="checkbox" data-pvisible="${i}"${visible?' checked':''}></label>
+     ${visible?'':'<div class="form-hint">お客様には表示されません。内容は保存され、再度ONにすると表示できます。</div>'}
+    </div>`;
+  }).join('')||'<p class="muted px" style="font-size:12px">「＋ お支払い方法を追加」から登録してください。</p>';
   $$('#payEditList [data-pname]').forEach(el=>el.addEventListener('input',e=>{editingPayMethods[+e.target.dataset.pname].name=e.target.value;}));
   $$('#payEditList [data-purl]').forEach(el=>el.addEventListener('input',e=>{editingPayMethods[+e.target.dataset.purl].url=e.target.value;}));
   $$('#payEditList [data-pnote]').forEach(el=>el.addEventListener('input',e=>{editingPayMethods[+e.target.dataset.pnote].note=e.target.value;}));
   $$('#payEditList [data-pinfo]').forEach(el=>el.addEventListener('input',e=>{editingPayMethods[+e.target.dataset.pinfo].info=e.target.value;}));
+  $$('#payEditList [data-pvisible]').forEach(el=>el.addEventListener('change',e=>{editingPayMethods[+e.target.dataset.pvisible].visible=e.target.checked;renderPayEditList();}));
  }
  $('#editPaymentBtn').onclick=()=>{
-  editingPayMethods=JSON.parse(JSON.stringify(siteContent.paymentMethods||[]));
+  editingPayMethods=normalizePayMethods(JSON.parse(JSON.stringify(siteContent.paymentMethods||[])));
   renderPayEditList();nav('adminPayment');
  };
  $('#paymentEditBack').onclick=()=>nav('admin');
- $('#addPayMethod').onclick=()=>{editingPayMethods.push({name:'',url:'',info:'',note:''});renderPayEditList();setTimeout(()=>{const ls=$$('#payEditList [data-pname]');ls[ls.length-1]?.focus();},40);};
+ $('#addPayMethod').onclick=()=>{editingPayMethods.push({name:'',url:'',info:'',note:'',visible:true});renderPayEditList();setTimeout(()=>{const ls=$$('#payEditList [data-pname]');ls[ls.length-1]?.focus();},40);};
  $('#savePaymentBtn').onclick=()=>{
-  siteContent.paymentMethods=editingPayMethods.filter(m=>m.name&&m.name.trim());
+  siteContent.paymentMethods=editingPayMethods
+   .filter(m=>m.name&&m.name.trim())
+   .map(m=>({name:m.name.trim(),note:m.note||'',info:m.info||'',url:m.url||'',visible:m.visible!==false}));
   save();toast('お支払い方法を保存しました');nav('admin');
  };
 
@@ -3397,6 +3427,7 @@ async function boot(){
   menus=(Array.isArray(m)&&m.length)?m:defaults.slice();
   orders=Array.isArray(o)?o:[];
   siteContent=Object.assign({},siteDefaults,s||{});
+  siteContent.paymentMethods=normalizePayMethods(siteContent.paymentMethods||siteDefaults.paymentMethods);
   selected=menus[0];
   // 初回（クラウド空）ならデフォルトをクラウドへ。
   if(!cloud||cloud.menus==null){sbSet('menus',menus);sbSet('orders',orders);sbSet('site',siteContent);}
@@ -3415,7 +3446,7 @@ async function boot(){
    let changed=false;
    if(cloud.orders&&J(cloud.orders)!==J(orders)){orders=cloud.orders;changed=true;}
    if(cloud.menus&&J(cloud.menus)!==J(menus)){menus=cloud.menus;changed=true;}
-   if(cloud.site&&J(cloud.site)!==J(siteContent)){siteContent=Object.assign({},siteDefaults,cloud.site);changed=true;}
+    if(cloud.site&&J(cloud.site)!==J(siteContent)){siteContent=Object.assign({},siteDefaults,cloud.site);siteContent.paymentMethods=normalizePayMethods(siteContent.paymentMethods||siteDefaults.paymentMethods);changed=true;}
    if(!changed)return;
    const active=document.querySelector('.screen.active')?.id;
    if(editScreens.includes(active))return; // 編集中の画面は再描画しない（データだけ更新）
