@@ -364,6 +364,7 @@
   }
   .status-pill.active{background:#E8F2F0;color:var(--ok)}
   .status-pill.done{background:#F0F0F0;color:var(--muted)}
+  .status-pill.cancel{background:#ece9e4;color:var(--muted)}
   .progress-bar{height:3px;background:var(--line);border-radius:999px;margin:12px 0 8px;overflow:hidden}
   .progress-fill{height:100%;background:var(--accent2);border-radius:999px;transition:width .3s}
 
@@ -518,6 +519,7 @@
   .aorder-b{font-size:10px;border-radius:999px;padding:2px 9px;font-weight:600;font-family:var(--num-font)}
   .aorder-b.paid{background:#eaf4ee;color:#2f7a52}
   .aorder-b.unpaid{background:#fdecea;color:#c0563f}
+  .aorder-b.cancel{background:#ece9e4;color:var(--muted);font-family:inherit}
   .aorder-b.assignee{background:var(--paper);color:var(--ink);font-family:inherit}
   .aorder-b.overdue{background:#fdecea;color:#c0392b}
   .aorder-b.unread{background:var(--accent2-deep);color:#fff}
@@ -575,6 +577,7 @@
   .pstep::before{content:'';position:absolute;top:11px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0}
   .pstep:first-child::before{display:none}
   .pstep.done::before,.pstep.current::before{background:var(--accent2-deep)}
+  .cancel-note{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.7;text-align:center}
   /* 納品物（お客様） */
   .deliv-sec{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
   .sec-label{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
@@ -630,6 +633,7 @@
   .hist-tag{font-size:10px;border-radius:999px;padding:3px 9px;font-weight:600;white-space:nowrap}
   .hist-tag.done{background:var(--paper);color:var(--muted)}
   .hist-tag.paid{background:#eaf4ee;color:#2f7a52}
+  .hist-tag.cancel{background:#ece9e4;color:var(--muted)}
   /* 支払い方法エディタ */
   .pay-edit-item{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;margin:0 20px 10px}
   .pay-edit-item.is-hidden{background:var(--paper)}
@@ -1119,6 +1123,7 @@
     <button class="ofilter-chip" data-ofilter="unpaid">未払い</button>
     <button class="ofilter-chip" data-ofilter="paid">支払い済み</button>
     <button class="ofilter-chip" data-ofilter="done">納品済み</button>
+    <button class="ofilter-chip" data-ofilter="cancel">キャンセル</button>
   </div>
   <div class="panel" style="padding:0 20px">
     <div id="adminOrders"></div>
@@ -1514,7 +1519,8 @@
    specs:['内容相談OK','お見積り無料','柔軟対応'],
    includes:['内容をヒアリング','カスタムでご提案','お見積り無料','まずは気軽にご相談を']}
  ];
- const STATUS_LIST=['ヒアリング中','見積もり中','制作中','確認中','納品済み'];
+ const CANCELED_STATUS='キャンセル';
+ const STATUS_LIST=['ヒアリング中','見積もり中','制作中','確認中','納品済み',CANCELED_STATUS];
 
  const siteDefaults={
   publicUrl:'', // QRコードに使う公開URL（GitHub PagesのURLなど）
@@ -2388,16 +2394,22 @@ async function uploadToSupabase(file,folder){
   const m=menus.find(x=>x.title===o.menu);
   return (m&&m.due)||'要相談';
  }
- function orderDueShort(o){
-  if(o.due){return ymdSlash(o.due);}
-  const m=menus.find(x=>x.title===o.menu);
-  return (m&&m.due)||'未定';
- }
- // 納期超過：希望納期(日付)が過ぎていて未納品
- function isOverdue(o){
-  if(!o.due||o.status==='納品済み'||o.archived)return false;
-  return o.due<new Date().toISOString().slice(0,10);
- }
+  function orderDueShort(o){
+   if(o.due){return ymdSlash(o.due);}
+   const m=menus.find(x=>x.title===o.menu);
+   return (m&&m.due)||'未定';
+  }
+  function isCanceled(o){return !!o&&o.status===CANCELED_STATUS;}
+  function statusLabel(status){return status===CANCELED_STATUS?'キャンセル済み':status;}
+  function setOrderStatus(o,status){
+   o.status=status;
+   if(isCanceled(o))o.archived=true;
+  }
+  // 納期超過：希望納期(日付)が過ぎていて未納品
+  function isOverdue(o){
+   if(!o.due||o.status==='納品済み'||isCanceled(o)||o.archived)return false;
+   return o.due<new Date().toISOString().slice(0,10);
+  }
  // 定型文
  const CANNED=['お申し込みありがとうございます！内容を確認いたします。','制作を開始いたします。少々お待ちください。','確認用のデータをお送りします。ご確認ください。','修正を反映しました。いかがでしょうか？','納品いたしました。ありがとうございました！'];
  // CSV書き出し
@@ -2409,14 +2421,16 @@ async function uploadToSupabase(file,folder){
   const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='miraco_orders.csv';a.click();
   toast('CSVを書き出しました');
  }
- const STEP_LABELS={'ヒアリング中':'ヒアリング','見積もり中':'見積り','制作中':'制作','確認中':'確認','納品済み':'納品'};
- function progressBar(status){
-  const idx=STATUS_LIST.indexOf(status);
-  return `<div class="pbar">${STATUS_LIST.map((s,i)=>{
-   const cls=i<idx?'done':(i===idx?'current':'');
-   return `<div class="pstep ${cls}"><div class="pstep-dot">${i<idx?'✓':i+1}</div><div class="pstep-label">${esc(STEP_LABELS[s]||s)}</div></div>`;
-  }).join('')}</div>`;
- }
+  const STEP_LABELS={'ヒアリング中':'ヒアリング','見積もり中':'見積り','制作中':'制作','確認中':'確認','納品済み':'納品'};
+  function progressBar(status){
+   if(status===CANCELED_STATUS)return '<div class="cancel-note">このご依頼はキャンセル済みです。</div>';
+   const steps=STATUS_LIST.filter(s=>s!==CANCELED_STATUS);
+   const idx=steps.indexOf(status);
+   return `<div class="pbar">${steps.map((s,i)=>{
+    const cls=i<idx?'done':(i===idx?'current':'');
+    return `<div class="pstep ${cls}"><div class="pstep-dot">${i<idx?'✓':i+1}</div><div class="pstep-label">${esc(STEP_LABELS[s]||s)}</div></div>`;
+   }).join('')}</div>`;
+  }
 
  // ─── Order Modal ───
  let viewingOrder=null;
@@ -2424,7 +2438,7 @@ async function uploadToSupabase(file,folder){
  function openMyOrder(no){
   const o=orders.find(x=>x.no===no);if(!o)return;
   $('#myOrderNo').textContent='依頼 #'+o.no;
-  const rows=[['メニュー',o.menu],['ステータス',o.status]];
+  const rows=[['メニュー',o.menu],['ステータス',statusLabel(o.status)]];
   const customRows=customFieldRowsArray(o.customFields);
   const rows2=[['お名前',o.name],['メール',o.email]];
   if(o.contact==='line')rows2.push(['LINE',o.line||'未入力']);
@@ -2464,12 +2478,12 @@ async function uploadToSupabase(file,folder){
    $('#submitReviewBtn').onclick=()=>submitReview(o.no,rating,$('#reviewText').value.trim());
   }
   // フッターのアクション
-  const total=q.total||0;const isHist=o.archived||o.status==='納品済み';
+  const total=q.total||0;const isHist=o.archived||o.status==='納品済み'||isCanceled(o);
   let foot='';
   if(o.contact!=='line')foot+=`<button class="btn warm" data-chat="${o.no}" style="border-radius:999px">チャットメッセージ${unreadCount(o,'user')?` <span class="chat-badge">${unreadCount(o,'user')}</span>`:''}</button>`;
   else foot+=`<button class="btn line-btn" data-line-note style="border-radius:999px">LINEメッセージ</button>`;
   if(o.paid)foot+=`<div style="text-align:center;padding:4px 0"><span class="pay-paid-badge">✓ お支払い済み</span></div>`;
-  else if(total>0)foot+=`<button class="btn primary" data-pay="${o.no}" style="border-radius:999px">お支払い ${yenFmt(total)}</button>`;
+  else if(total>0&&!isCanceled(o))foot+=`<button class="btn primary" data-pay="${o.no}" style="border-radius:999px">お支払い ${yenFmt(total)}</button>`;
   if(isHist)foot+=`<button class="btn secondary" data-reorder="${o.no}" style="border-radius:999px">同じ内容でもう一度</button>`;
   foot+=`<button class="btn ghost" id="myOrderCloseBtn" style="border-radius:999px">閉じる</button>`;
   $('#myOrderFoot').innerHTML=foot;
@@ -2511,8 +2525,8 @@ async function uploadToSupabase(file,folder){
   ];
   const customRows=customFieldRowsArray(o.customFields);
   const rows2=[
-   ['ご連絡',o.msg||'未入力'],['希望納期',o.due||'未定'],
-   ['お支払い',o.pay],['受付日',o.date],['ステータス',o.status]
+    ['ご連絡',o.msg||'未入力'],['希望納期',o.due||'未定'],
+    ['お支払い',o.pay],['受付日',o.date],['ステータス',statusLabel(o.status)]
   ];
   const rowsHTML=[...rows,...customRows,...rows2].map(([l,v])=>`
    <div class="detail-row">
@@ -2636,12 +2650,18 @@ async function uploadToSupabase(file,folder){
   }
   // アーカイブボタン
   const ab=$('#orderArchiveBtn');
-  ab.textContent=o.archived?'アーカイブから戻す':'アーカイブに移動';
-  ab.onclick=()=>{
-   o.archived=!o.archived;save();renderOrders();
-   $('#orderModal').classList.remove('on');
-   toast(o.archived?'アーカイブに移動しました':'アーカイブから戻しました');
-  };
+   ab.textContent=isCanceled(o)?'キャンセル済み（履歴保存）':(o.archived?'アーカイブから戻す':'アーカイブに移動');
+   ab.onclick=()=>{
+    if(isCanceled(o)){
+     o.archived=true;
+     save();renderOrders();
+     toast('キャンセル済みの依頼は履歴として残ります');
+     return;
+    }
+    o.archived=!o.archived;save();renderOrders();
+    $('#orderModal').classList.remove('on');
+    toast(o.archived?'アーカイブに移動しました':'アーカイブから戻しました');
+   };
   $('#orderModal').classList.add('on');
   renderOrders(); // 既読化を一覧バッジに即反映
  }
@@ -2651,32 +2671,34 @@ async function uploadToSupabase(file,folder){
  // 背景タップでは閉じない（×ボタンのみ）
  $('#orderModalStatus').addEventListener('change',e=>{
   if(viewingOrder){
-   viewingOrder.status=e.target.value;save();renderOrders();
-   // モーダル内のステータスも更新
-   const statusRow=$('#orderModalBody').querySelectorAll('.detail-row');
-   statusRow.forEach(r=>{if(r.querySelector('.detail-row-label')?.textContent==='ステータス'){r.querySelector('.detail-row-val').textContent=viewingOrder.status;}});
+    setOrderStatus(viewingOrder,e.target.value);save();renderOrders();
+    // モーダル内のステータスも更新
+    const statusRow=$('#orderModalBody').querySelectorAll('.detail-row');
+    statusRow.forEach(r=>{if(r.querySelector('.detail-row-label')?.textContent==='ステータス'){r.querySelector('.detail-row-val').textContent=statusLabel(viewingOrder.status);}});
    toast('ステータスを更新しました');
   }
  });
 
- function renderOrders(){
-  const liveO=orders.filter(o=>!o.archived);
+  function renderOrders(){
+  const isLive=o=>!o.archived&&!isCanceled(o);
+  const isArchive=o=>!!o.archived||isCanceled(o);
+  const liveO=orders.filter(isLive);
   $('#sNew').textContent=liveO.filter(o=>o.status==='ヒアリング中').length;
   $('#sDoing').textContent=liveO.filter(o=>['見積もり中','制作中','確認中'].includes(o.status)).length;
   $('#sUnpaid').textContent=liveO.filter(o=>!o.paid&&o.status!=='納品済み').length;
   // 売上：支払い済みの依頼の見積り合計を合算
-  const sales=orders.filter(o=>o.paid).reduce((sum,o)=>{
+  const sales=orders.filter(o=>o.paid&&!isCanceled(o)).reduce((sum,o)=>{
    const q=o.quote||calcQuoteFrom(o);
    return sum+(q.total||0);
   },0);
   const sEl=$('#sSales');if(sEl)sEl.textContent='¥'+sales.toLocaleString();
   // 管理側バッジ：運営者ログイン時のみ表示（お客様には見せない）
-  const attention=adminAuthed?orders.filter(o=>!o.archived&&((o.status==='ヒアリング中'&&!o.adminViewed)||unreadCount(o,'admin')>0)).length:0;
+  const attention=adminAuthed?orders.filter(o=>isLive(o)&&((o.status==='ヒアリング中'&&!o.adminViewed)||unreadCount(o,'admin')>0)).length:0;
   const hb=$('#hdrBadge');if(hb){hb.textContent=attention;hb.style.display=attention?'flex':'none';}
   const db=$('#drawerAdminBadge');if(db){db.textContent=attention;db.style.display=attention?'inline-flex':'none';}
 
   // 管理画面: 依頼一覧（タップで詳細モーダル）／アーカイブ表示切替
-  const archivedCount=orders.filter(o=>o.archived).length;
+  const archivedCount=orders.filter(isArchive).length;
   const at=$('#archiveToggle');if(at){at.textContent=showArchived?'← 通常表示に戻る':`アーカイブを見る${archivedCount?'（'+archivedCount+'）':''}`;at.classList.toggle('on',showArchived);}
   // フィルターチップ＆統計カードの選択状態
   $$('#orderFilter .ofilter-chip').forEach(c=>c.classList.toggle('on',c.dataset.ofilter===orderFilter));
@@ -2684,23 +2706,24 @@ async function uploadToSupabase(file,folder){
   const ofMatch=o=>{
    if(orderFilter==='new')return o.status==='ヒアリング中';
    if(orderFilter==='doing')return ['見積もり中','制作中','確認中'].includes(o.status);
-   if(orderFilter==='paid')return !!o.paid;
-   if(orderFilter==='unpaid')return !o.paid;
+   if(orderFilter==='paid')return !!o.paid&&!isCanceled(o);
+   if(orderFilter==='unpaid')return !o.paid&&o.status!=='納品済み'&&!isCanceled(o);
    if(orderFilter==='done')return o.status==='納品済み';
+   if(orderFilter==='cancel')return isCanceled(o);
    return true;
   };
-  const listOrders=orders.filter(o=>(showArchived?o.archived:!o.archived)&&ofMatch(o)).slice().reverse();
+  const listOrders=orders.filter(o=>(showArchived?isArchive(o):isLive(o))&&ofMatch(o)).slice().reverse();
   $('#adminOrders').innerHTML=listOrders.length
    ?listOrders.map(o=>{const u=unreadCount(o,'admin');const ov=isOverdue(o);return `
     <div class="aorder${ov?' overdue':''}" data-order-open="${o.no}">
      <div class="aorder-top">
       <span class="aorder-name">${esc(o.name)}</span>
       <span class="aorder-num">#${o.no}</span>
-      <span class="aorder-tag">${esc(o.status)}</span>
+      <span class="aorder-tag">${esc(statusLabel(o.status))}</span>
      </div>
      <div class="aorder-meta">${esc(o.menu)}　受注 ${ymdSlash(o.date)}・納期 ${esc(orderDueShort(o))}</div>
      <div class="aorder-badges">
-      ${o.paid?'<span class="aorder-b paid">✓支払済</span>':'<span class="aorder-b unpaid">未入金</span>'}
+      ${isCanceled(o)?'<span class="aorder-b cancel">キャンセル</span>':(o.paid?'<span class="aorder-b paid">✓支払済</span>':'<span class="aorder-b unpaid">未入金</span>')}
       ${o.assignee?`<span class="aorder-b assignee">担当 ${esc(o.assignee)}</span>`:''}
       ${ov?'<span class="aorder-b overdue">⚠️納期超過</span>':''}
       ${u?`<span class="aorder-b unread">💬${u}</span>`:''}
@@ -2717,12 +2740,12 @@ async function uploadToSupabase(file,folder){
   }
   $('#loginBox').style.display='none';$('#logoutWrap').style.display='';$('#mypageSub').textContent='ご依頼の状況を確認できます';
   const mine=orders.filter(o=>o.email===currentUser);
-  // 申込中（active）と注文履歴（納品済み or アーカイブ）に分割
-  const active=mine.filter(o=>!o.archived&&o.status!=='納品済み');
-  const history=mine.filter(o=>o.archived||o.status==='納品済み');
+  // 申込中（active）と注文履歴（納品済み / キャンセル / アーカイブ）に分割
+  const active=mine.filter(o=>!o.archived&&o.status!=='納品済み'&&!isCanceled(o));
+  const history=mine.filter(o=>o.archived||o.status==='納品済み'||isCanceled(o));
   $('#helloUser').textContent=mine.length?`こんにちは、${mine[mine.length-1].name}さん`:'こんにちは。';
   // 新着メッセージバナー（お客様への未読）
-  const unreadOrders=mine.filter(o=>!o.archived&&unreadCount(o,'user')>0);
+  const unreadOrders=mine.filter(o=>!o.archived&&!isCanceled(o)&&unreadCount(o,'user')>0);
   const totalUnread=unreadOrders.reduce((s,o)=>s+unreadCount(o,'user'),0);
   let bannerHTML='';
   if(totalUnread>0){
@@ -2750,7 +2773,7 @@ async function uploadToSupabase(file,folder){
        <div class="order-title">${esc(o.menu)}</div>
        <div class="order-metaline">受注 ${ymdJP(o.date)}　/　納期目安 ${esc(due)}</div>
       </div>
-      <span class="status-pill">${o.status}</span>
+       <span class="status-pill">${esc(statusLabel(o.status))}</span>
      </div>
      <div class="progress-bar"><div class="progress-fill" style="width:${getProgress(o.status)}%"></div></div>
      <div style="display:flex;gap:8px;margin-bottom:${total>0||o.paid?'8px':'0'}">
@@ -2765,14 +2788,16 @@ async function uploadToSupabase(file,folder){
   // 注文履歴
   if(history.length){
    $('#myHistoryWrap').style.display='';
-   $('#myHistory').innerHTML=history.slice().reverse().map(o=>{
-    const q=o.quote||calcQuoteFrom(o);
-    return `<div class="hist-item" data-myorder="${o.no}">
+    $('#myHistory').innerHTML=history.slice().reverse().map(o=>{
+     const q=o.quote||calcQuoteFrom(o);
+     const histLabel=isCanceled(o)?'キャンセル済み':(o.paid?'支払い済み':statusLabel(o.status));
+     const histClass=isCanceled(o)?'cancel':(o.paid?'paid':'done');
+     return `<div class="hist-item" data-myorder="${o.no}">
      <div class="hist-item-info">
       <div class="hist-item-title">${esc(o.menu)}</div>
       <div class="hist-item-meta">受注 ${ymdJP(o.date)}</div>
      </div>
-     <span class="hist-tag ${o.paid?'paid':'done'}">${o.paid?'支払い済み':o.status}</span>
+      <span class="hist-tag ${histClass}">${esc(histLabel)}</span>
      <span class="hist-item-amt">${yenFmt(q.total)}</span>
     </div>`;}).join('');
   } else {
@@ -2819,7 +2844,7 @@ async function uploadToSupabase(file,folder){
    const nb=t==='heading'?{type:'heading',content:'',size:'md'}:(t==='menus'?{type:'menus',content:'MIRACOでできること'}:(t==='reviews'?{type:'reviews',content:'お客様の声'}:{type:t,content:''}));
    editingHomeBlocks.push(nb);renderBlockEditor(editingHomeBlocks,'#homeBlocksEditor');return;}
   const ofChip=e.target.closest('[data-ofilter]');
-  if(ofChip){orderFilter=ofChip.dataset.ofilter;renderOrders();return;}
+  if(ofChip){orderFilter=ofChip.dataset.ofilter;if(orderFilter==='cancel')showArchived=true;renderOrders();return;}
   const statCard=e.target.closest('[data-statfilter]');
   if(statCard){orderFilter=statCard.dataset.statfilter;showArchived=false;renderOrders();return;}
   const themeCard=e.target.closest('[data-theme]');
@@ -2939,7 +2964,7 @@ async function uploadToSupabase(file,folder){
   if(e.target.classList.contains('status-select')){
    const no=e.target.dataset.order;
    const o=orders.find(x=>x.no===no);
-   if(o){o.status=e.target.value;save();renderOrders();toast('ステータスを更新しました');}
+   if(o){setOrderStatus(o,e.target.value);save();renderOrders();toast('ステータスを更新しました');}
   }
   // レビュー公開トグル
   if(e.target.dataset&&e.target.dataset.rpub!==undefined){
