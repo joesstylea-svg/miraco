@@ -317,6 +317,13 @@
   .file-upload:hover{border-color:var(--accent)}
   .file-upload-icon{font-size:22px;margin-bottom:6px;color:var(--muted)}
   .file-upload-text{font-size:12px;color:var(--muted)}
+  .custom-image-upload{
+    min-height:58px;padding:11px 14px;text-align:left;display:flex;align-items:center;
+  }
+  .custom-image-upload .file-upload-icon{display:none}
+  .custom-image-upload .file-upload-text{font-size:13px;line-height:1.55;color:var(--muted)}
+  .custom-image-upload .file-upload-text br,
+  .custom-image-upload .file-upload-text span{display:none}
   .upload-preview{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--card)}
   .upload-preview img{width:100%;max-height:180px;object-fit:contain;background:var(--paper);display:block}
   .upload-preview-meta{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;font-size:11px;color:var(--muted)}
@@ -2036,7 +2043,7 @@ async function uploadToSupabase(file,folder){
     const req=f.required?'<span style="color:#c05050;margin-left:2px">*</span>':'';
     if(f.type==='text') return `<div class="form-group"><label>${esc(f.label)}${req}</label><input data-cfi="${i}" placeholder="${esc(f.placeholder||'')}"></div>`;
     if(f.type==='textarea') return `<div class="form-group"><label>${esc(f.label)}${req}</label><textarea data-cfi="${i}" placeholder="${esc(f.placeholder||'')}"></textarea></div>`;
-    if(f.type==='image') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="file-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}<br><span style="font-size:10px">PNG / JPG / WEBP</span></div></div><input type="file" accept="image/*" data-cf-file="${i}" style="display:none"></div>`;
+    if(f.type==='image') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="file-upload custom-image-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}</div></div><input type="file" accept="image/*" data-cf-file="${i}" style="display:none"></div>`;
     if(f.type==='radio') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="radio-group">${(f.options||[]).map(o=>`<label class="radio-option"><input type="radio" name="cf_r${i}" value="${esc(o)}" data-cfi="${i}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
     if(f.type==='checkbox') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="radio-group">${(f.options||[]).map(o=>`<label class="radio-option"><input type="checkbox" value="${esc(o)}" data-cfic="${i}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
     return '';
@@ -2197,10 +2204,9 @@ async function uploadToSupabase(file,folder){
     if(f.type==='image'){
      const info=saved&&typeof saved==='object'?uploadPreviewHTML(saved):'';
      return `<div class="form-group"><label>${esc(f.label)} ${req}</label>
-      <div class="file-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}<br><span style="font-size:10px">PNG / JPG / WEBP</span></div></div>
+      <div class="file-upload custom-image-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}</div></div>
       <input type="file" accept="image/*" data-cf-file="${i}" style="display:none">
       <div data-cf-file-preview="${i}">${info}</div>
-      <div class="form-hint">画像はSupabase Storageに保存されます。印刷用ロゴなど大きい原寸データも受け取れます。</div>
      </div>`;
     }
     if(f.type==='radio'){
@@ -3370,7 +3376,7 @@ async function uploadToSupabase(file,folder){
    const req=f.required?'<span style="color:#c05050">*</span>':'';
    if(f.type==='text')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><input placeholder="${esc(f.placeholder||'')}"></div>`;
    if(f.type==='textarea')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><textarea placeholder="${esc(f.placeholder||'')}"></textarea></div>`;
-   if(f.type==='image')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="file-upload"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}<br><span style="font-size:10px">PNG / JPG / WEBP</span></div></div><div class="form-hint">画像はSupabase Storageに保存されます。</div></div>`;
+   if(f.type==='image')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="file-upload custom-image-upload"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を選択')}</div></div></div>`;
    if(f.type==='radio'||f.type==='checkbox'){
     const opts=normalizeOptions(f.options);const hasImg=opts.some(o=>o.image);const inp=f.type==='radio'?'radio':'checkbox';const dot=f.type==='checkbox'?'is-check':'';
     return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="${hasImg?'radio-grid':'radio-group'}">${opts.map(o=>o.image?`<label class="radio-option has-img"><img class="opt-img" src="${esc(o.image)}"><div class="opt-label"><input type="${inp}"><span class="radio-dot ${dot}"></span><span>${esc(o.label)}</span>${pTag(o)}</div></label>`:`<label class="radio-option"><input type="${inp}"><span class="radio-dot ${dot}"></span><span>${esc(o.label)}</span>${pTag(o)}</label>`).join('')}</div></div>`;
