@@ -322,9 +322,8 @@
   }
   .custom-image-upload .file-upload-icon{display:none}
   .custom-image-upload .file-upload-text{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;line-height:1.5;color:var(--muted)}
-  .upload-prompt{font-weight:700;color:var(--accent-dark);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 11px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-  .upload-note{flex:1;min-width:0}
-  @media(max-width:420px){.custom-image-upload .file-upload-text{align-items:flex-start;flex-direction:column;gap:5px}.upload-prompt{padding:4px 10px}}
+  .custom-image-upload .file-upload-text::after{content:'＋ 画像を選択';font-weight:700;color:var(--accent-dark);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 11px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  @media(max-width:420px){.custom-image-upload .file-upload-text{align-items:flex-start;flex-direction:column;gap:5px}.custom-image-upload .file-upload-text::after{padding:4px 10px}}
   .upload-preview{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--card)}
   .upload-preview img{width:100%;max-height:180px;object-fit:contain;background:var(--paper);display:block}
   .upload-preview-meta{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;font-size:11px;color:var(--muted)}
@@ -2044,7 +2043,7 @@ async function uploadToSupabase(file,folder){
     const req=f.required?'<span style="color:#c05050;margin-left:2px">*</span>':'';
     if(f.type==='text') return `<div class="form-group"><label>${esc(f.label)}${req}</label><input data-cfi="${i}" placeholder="${esc(f.placeholder||'')}"></div>`;
     if(f.type==='textarea') return `<div class="form-group"><label>${esc(f.label)}${req}</label><textarea data-cfi="${i}" placeholder="${esc(f.placeholder||'')}"></textarea></div>`;
-    if(f.type==='image') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="file-upload custom-image-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text"><span class="upload-note">${esc(f.placeholder||'画像を添付できます')}</span><span class="upload-prompt">＋ 画像を選択</span></div></div><input type="file" accept="image/*" data-cf-file="${i}" style="display:none"></div>`;
+    if(f.type==='image') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="file-upload custom-image-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を添付できます')}</div></div><input type="file" accept="image/*" data-cf-file="${i}" style="display:none"></div>`;
     if(f.type==='radio') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="radio-group">${(f.options||[]).map(o=>`<label class="radio-option"><input type="radio" name="cf_r${i}" value="${esc(o)}" data-cfi="${i}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
     if(f.type==='checkbox') return `<div class="form-group"><label>${esc(f.label)}${req}</label><div class="radio-group">${(f.options||[]).map(o=>`<label class="radio-option"><input type="checkbox" value="${esc(o)}" data-cfic="${i}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
     return '';
@@ -2205,7 +2204,7 @@ async function uploadToSupabase(file,folder){
     if(f.type==='image'){
      const info=saved&&typeof saved==='object'?uploadPreviewHTML(saved):'';
      return `<div class="form-group"><label>${esc(f.label)} ${req}</label>
-      <div class="file-upload custom-image-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text"><span class="upload-note">${esc(f.placeholder||'画像を添付できます')}</span><span class="upload-prompt">＋ 画像を選択</span></div></div>
+      <div class="file-upload custom-image-upload" data-cf-file-area="${i}"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を添付できます')}</div></div>
       <input type="file" accept="image/*" data-cf-file="${i}" style="display:none">
       <div data-cf-file-preview="${i}">${info}</div>
      </div>`;
@@ -3377,7 +3376,7 @@ async function uploadToSupabase(file,folder){
    const req=f.required?'<span style="color:#c05050">*</span>':'';
    if(f.type==='text')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><input placeholder="${esc(f.placeholder||'')}"></div>`;
    if(f.type==='textarea')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><textarea placeholder="${esc(f.placeholder||'')}"></textarea></div>`;
-   if(f.type==='image')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="file-upload custom-image-upload"><div class="file-upload-icon">📎</div><div class="file-upload-text"><span class="upload-note">${esc(f.placeholder||'画像を添付できます')}</span><span class="upload-prompt">＋ 画像を選択</span></div></div></div>`;
+   if(f.type==='image')return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="file-upload custom-image-upload"><div class="file-upload-icon">📎</div><div class="file-upload-text">${esc(f.placeholder||'画像を添付できます')}</div></div></div>`;
    if(f.type==='radio'||f.type==='checkbox'){
     const opts=normalizeOptions(f.options);const hasImg=opts.some(o=>o.image);const inp=f.type==='radio'?'radio':'checkbox';const dot=f.type==='checkbox'?'is-check':'';
     return `<div class="form-group"><label>${esc(f.label)} ${req}</label><div class="${hasImg?'radio-grid':'radio-group'}">${opts.map(o=>o.image?`<label class="radio-option has-img"><img class="opt-img" src="${esc(o.image)}"><div class="opt-label"><input type="${inp}"><span class="radio-dot ${dot}"></span><span>${esc(o.label)}</span>${pTag(o)}</div></label>`:`<label class="radio-option"><input type="${inp}"><span class="radio-dot ${dot}"></span><span>${esc(o.label)}</span>${pTag(o)}</label>`).join('')}</div></div>`;
